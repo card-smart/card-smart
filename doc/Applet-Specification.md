@@ -11,6 +11,9 @@
 * names stored in filesystem
 * no PIN protection needed
 * data sent as bytes, '\0' divider
+* data in LV (length-value) structure
+  * length = 1 byte
+  * data = name
 
 ### 3. Login
 * PIN policy setup in the applet
@@ -35,175 +38,6 @@
 * send secret name to card, which should be deleted
 * get information, that such data do not exist/cannot be deleted
 
-
-## APDU Specification
-* CLA = C0
-
-### GET names
-* data length
-  * INS = 0x40
-  * P1 = 0x01
-  * P2 = 0x00
-  * lc = 0x00
-  * responses:
-    * 90 00 - success
-    * 6A 88 - data not found
-    * 6B 00 - wrong parameter(s) P1-P2
-* data chunks
-  * INS = 0x40
-  * P1 = 0x02
-  * P2 = 0xXX (XX is the order of the chunk)
-  * lc = 0x00
-  * responses:
-    * 90 00 - success
-    * 6A 88 - data not found
-    * 6B 00 - wrong parameter(s) P1-P2
-    * 6B 01 - wrong parameter P2 - chunk not found
-
-### PIN login
-* get remaining tries
-  * INS = 0x20
-  * P1 = 0x00
-  * P2 = 0x01 (PIN refernce, for PUK it would be different)
-  * lc = 00
-  * reponses
-    * 63 C3 - 3 tries left, not logged in
-    * 63 C2 - 2 tries left, not logged in
-    * 63 C1 - 1 tries left, not logged in
-    * 63 C0 - 0 tries left, not logged in, card locked
-    * 6B 00 - wrong parameter(s) P1-P2
-* verify PIN = log-in
-  * INS = 0x20
-  * P1 = 0x00
-  * P2 = 0x01 (PIN reference, for PUK it would be different)
-  * lc = XX (length of PIN, max 0x0A)
-  * data
-  * reponses
-    * 90 00 successfully logged into card
-    * 63 C2 - 2 tries left, not logged in
-    * 63 C1 - 1 tries left, not logged in
-    * 63 C0 - 0 tries left, not logged in, card locked
-    * 6B 00 - wrong parameter(s) P1-P2
-
-### Change PIN
-* change pin
-  * INS = 0x21
-  * P1 = 0x00
-  * P2 = 0x01 (PIN reference, for PUK it would be different)
-  * lc = XX (length of PIN, max 0x0A)
-  * data = PIN
-  * responses
-    * 90 00 success
-    * 6B 00 wrong parameter(s) P1-P2
-    * 63 00 PIN policy not satisfied
-
-### GET value of secret
-* data length
-  * INS = 0x41
-  * P1 = 0x01
-  * P2 = 0x00
-  * lc = XX (length of name)
-  * data = name
-  * responses:
-    * 90 00 - success
-    * 6A 88 - data not found
-    * 6B 00 - wrong parameter(s) P1-P2
-* data chunks
-  * INS = 0x41
-  * P1 = 0x02
-  * P2 = 0xXX (XX is the order of the chunk)
-  * lc = 0x00
-  * responses:
-    * 90 00 - success
-    * 6A 88 - data not found
-    * 6B 00 - wrong parameter(s) P1-P2
-    * 6B 01 - wrong parameter P2 - chunk not found
-
-### STORE secret
-* send data length
-  * INS = 0x41
-  * P1 = 0x01
-  * P2 = 0x00
-  * lc = XX (length data lengt)
-  * data = length(name | 0x00 | secre)
-  * responses
-    * 90 00 - success
-    * 6B 00 - wrong parameter(s) P1-P2
-    * 6A 00 - given name already exists
-    * 6A 01 - cannot store such data
-* send data
-  * INS = 0x41
-  * P1 = 0x02
-  * P2 = 0x00
-  * lc = XX (length chunk)
-  * data = length(name | 0x00 | secre)
-  * responses
-    * 90 00 - success
-    * 6B 00 - wrong parameter(s) P1-P2
-    * 6A 00 - given name already exists
-    * 6A 01 - cannot store such data
-
-### DELETE secret
-* delete secret by name
-  * INS = 0x42
-  * P1 = 0x00
-  * P2 = 0x00
-  * lc = XX (length of name)
-  * responses
-    * 90 00 - success
-    * 6B 00 - wrong parameter(s) P1-P2
-    * 6A 02 - given name does not exist
-    * 6A 03 - cannot delete such data
-
-## Workflows
-### 1. Reading of all names
-```
---> C0 40 01 00 00 (send me resulting lengthof data)
---< xx xx .. 90 00 (xx length of data)
---> C0 40 02 XX 00 (XXth chunk expected)
---< ........ 90 00
-```
-
-### 2. Log into card with PIN
-```
---> C0 20 00 01 00
---< 63 C3 (3 tries left)
---> C0 20 00 01 06 01 02 03 04 05 06
---< 90 00
-```
-
-### 3. Change PIN to NEWPIN
-```
---> C0 20 00 01 00
---< 63 C3 (3 tries left)
---> C0 20 00 01 06 01 02 03 04 05 06
---< 90 00
---> C0 21 00 01 07 01 02 03 04 05 06 07
---> 90 00
-```
-
-### 4. Get value of some secret by name
-```
---> C0 20 00 01 00
---< 63 C3 (3 tries left)
---> C0 20 00 01 06 01 02 03 04 05 06
---< 90 00
---> C0 41 01 00 04 61 62 63 64
---< xx xx .. 90 00 (xx is the length of the secret 'abcd')
---> C0 41 02 00 04 61 62 63 64 (get first chunk of secret 'abcd')
---< xx xx .. 90 00
-```
-
-### 5. Deleted value of secret by name
-```
---> C0 20 00 01 00
---< 63 C3 (3 tries left)
---> C0 20 00 01 06 01 02 03 04 05 06
---< 90 00
---> C0 42 00 00 04 61 62 63 64 (delete secret with name 'abcd')
---< 90 00
-```
-
 ## Files
 ### CardSmartApplet.java
 #### Static information
@@ -214,11 +48,317 @@
   * min length = 4
   * max length = 10
 * storage related information
-  * max record size = 4096
-  * max record number = ? 
+  * max record size = 32
+  * max record number = 32
 * name policy
   * alfanumeric characters
   * min length of name = 4
   * max length of name = 10
 
-### FileSystem.java
+#### Initialization
+* create default OwnerPIN object
+* generate new asymmetric keys
+* secure channel instance
+* array to store secrets:
+```
+private short maxNumberOfRecords;
+MyObject[] myObjects = new MyObject[10];
+
+for (short i = 0; i < myObjects.length; i++) {
+    myObjects[i] = new MyObject();
+}
+```
+
+### Record.java
+* name
+* HMACKey object for secret data
+* getter
+* checksum to detect faults (hash?)
+
+### SecureChannel.java
+* generate random new key pair for secure communication
+
+
+## APDU Specification
+* CLA = `0xC0`
+* **APDU STRUCTURE**
+  1. Unsecure = not encrypted nor MACed
+      * data are sent directly over the insecure channel
+      * APDU processed directly
+  2. Secure = encrypt-than-MAC
+      * sending with special APDU, which means _we are sending encrypted data, which are along with the command_
+  ```
+  Unsecure APDU:
+  CLA | INS | P1 | P2 | lc | data [max 255 B]
+
+  Secure APDU:
+  CLA | INS | P1 | P2 | lc | encryted data [max 239 B] | MAC tag [16 B]
+
+  Inner encrypted data [max 239 B]:
+  INS | OP | lc | data [max 236 B]
+
+  Unsecure RES:
+  SW1 | SW2 | data [max 256 B]
+
+  Secure RES:
+  SW1 | SW2 | encrypted data [max 240 B] | MAC tag [16 B]
+  ```
+* **LV structure** (length-value)
+  ```
+  LEN | VALUE
+  ```
+
+### Unsecure Get Card EC Public Key
+| APDU | Values  |
+| ---- | ------- |
+| CLA  | `0xC0`  |
+| INS  | `0x40`  |
+| P0   | `0x00`  |
+| P1   | `0x00`  |
+| lc   | `0x00`  |
+| DATA | ignored |
+| le   | ignored |
+
+| RES      | Data field    | Info  |
+| -------- | ------------- | ----- |
+| `0x9000` | EC public key |       |
+| `0x6B00` | none          | error |
+
+### Unsecure Open Secure Channel
+| APDU | Values                             |
+| ---- | ---------------------------------- |
+| CLA  | `0xC0`                             |
+| INS  | `0x41`                             |
+| P0   | `0x00`                             |
+| P1   | `0x00`                             |
+| lc   | length of app public key and nonce |
+| DATA | app public key and nonce           |
+
+| RES      | Data field | Info    |
+| -------- | ---------- | ------- |
+| `0x9000` |            | success |
+
+### Unsecure Send Message
+| APDU | Values                                 |
+| ---- | -------------------------------------- |
+| CLA  | `0xC0`                                 |
+| INS  | `0x42`                                 |
+| P0   | `0x00`                                 |
+| P1   | `0x00`                                 |
+| lc   | length of the encrypted data + MAC tag |
+| DATA | encrypted data + MAC tag               |
+
+### Unsecure Close Secure Channel
+| APDU | Values  |
+| ---- | ------- |
+| CLA  | `0xC0`  |
+| INS  | `0x43`  |
+| P0   | `0x00`  |
+| P1   | `0x00`  |
+| lc   | `0x00`  |
+| DATA | ignored |
+
+### Secure channel error codes
+| RES      | Data field | Info                        |
+| -------- | ---------- | --------------------------- |
+| `0x9000` |            | success                     |
+| `0x6A00` |            | decryption error            |
+| `0x6A01` |            | MAC error                   |
+| `0x6B00` |            | error                       |
+| `0x6B01` |            | not logged in               |
+| `0x6B02` |            | PIN policy not satisfied    |
+| `0x6B03` |            | storage full                |
+| `0x6B04` |            | name policy not satisfied   |
+| `0x6B05` |            | secret policy not satisfied |
+| `0x6B06` |            | no such data                |
+
+### Secure Get Names Length
+| APDU | Values  |
+| ---- | ------- |
+| INS  | `0x50`  |
+| OP   | `0x00`  |
+| lc   | `0x00`  |
+| DATA | ignored |
+
+| RES      | Data field | Info  |
+| -------- | ---------- | ----- |
+| `0x9000` |            |       |
+| `0x6B00` |            | error |
+
+#### Secure Get Names
+| APDU | Values                                                                                        |
+| ---- | --------------------------------------------------------------------------------------------- |
+| INS  | `0x51`                                                                                        |
+| OP   | `0x0Y`, where `Y` is the number of expected chunk order of the wanted chunk (starting from 0) |
+| lc   | `0x00`                                                                                        |
+| DATA | ignored                                                                                       |
+
+| RES      | Data field | Info  |
+| -------- | ---------- | ----- |
+| `0x9000` |            |       |
+| `0x6B00` |            | error |
+
+### Secure Get PIN Remaining Tries
+| APDU | Values  |
+| ---- | ------- |
+| INS  | `0x60`  |
+| OP   | `0x00`  |
+| lc   | `0x00`  |
+| DATA | ignored |
+
+| RES      | Data field            | Info  |
+| -------- | --------------------- | ----- |
+| `0x9000` | remaining tries [2 B] |       |
+| `0x6B00` |                       | error |
+
+### Secure PIN Verify
+| APDU | Values               |
+| ---- | -------------------- |
+| INS  | `0x61`               |
+| OP   | `0x00`               |
+| lc   | `0x10`               |
+| DATA | PIN [padded to 16 B] |
+
+| RES      | Data field | Info          |
+| -------- | ---------- | ------------- |
+| `0x9000` |            | success       |
+| `0x6B00` |            | error         |
+| `0x6B01` |            | not logged in |
+
+### Secure Change PIN
+| APDU | Values                   |
+| ---- | ------------------------ |
+| INS  | `0x62`                   |
+| OP   | `0x00`                   |
+| lc   | `0x10`                   |
+| DATA | new pin [padded to 16 B] |
+
+| RES      | Data field | Info                     |
+| -------- | ---------- | ------------------------ |
+| `0x9000` |            | success                  |
+| `0x6B00` |            | error                    |
+| `0x6B02` |            | PIN policy not satisfied |
+
+### Secure Get Length of Secret
+| APDU | Values                           |
+| ---- | -------------------------------- |
+| INS  | `0x70`                           |
+| OP   | `0x00`                           |
+| lc   | `0xYY` length of the wanted name |
+| DATA | ignored                          |
+
+| RES      | Data field                 | Info    |
+| -------- | -------------------------- | ------- |
+| `0x9000` | length of the secret [2 B] | success |
+| `0x6B00` |                            | error   |
+
+### Secure Get Value of Secret
+| APDU | Values                                             |
+| ---- | -------------------------------------------------- |
+| INS  | `0x71`                                             |
+| OP   | `0x0A` order of the wanted chunk (starting from 0) |
+| lc   | `0xBB` length of the wanted name                   |
+| DATA | name                                               |
+
+| RES      | Data field  | Info    |
+| -------- | ----------- | ------- |
+| `0x9000` | secret data | success |
+| `0x6B00` |             | error   |
+
+### Secure Store Value of Secret
+| APDU | Values                                       |
+| ---- | -------------------------------------------- |
+| INS  | `0x80`                                       |
+| OP   | `0x00`                                       |
+| lc   | `0xBB` length of name + secret data          |
+| DATA | name length [1 B] \ name [max 10 B] \ secret |
+
+| RES      | Data field | Info                        |
+| -------- | ---------- | --------------------------- |
+| `0x9000` |            | success                     |
+| `0x6B00` |            | error                       |
+| `0x6B03` |            | storage full                |
+| `0x6B04` |            | name policy not satisfied   |
+| `0x6B05` |            | secret policy not satisfied |
+
+
+### Secure Delete Secret
+| APDU | Values                |
+| ---- | --------------------- |
+| INS  | `0x81`                |
+| OP   | `0x00`                |
+| lc   | `0xBB` length of name |
+| DATA | name                  |
+
+| RES      | Data field  | Info         |
+| -------- | ----------- | ------------ |
+| `0x9000` | secret data | success      |
+| `0x6B00` |             | error        |
+| `0x6B06` |             | no such data |
+
+## Workflows
+
+### Secure channel
+#### Opening secure channel
+```
+--> C0 40 00 00 00
+--< xx xx .. 90 00 (xx = public key)
+--> C0 41 00 00 xx data 
+--< xx xx .. 90 00 (xx = authentication data)
+```
+
+#### Sending encrypted message
+```
+--> C0 42 00 00 xx data (xx = length of encrypted data)
+--< xx xx .. 90 00 (xx = encrypted response)
+```
+
+#### Closing secure channel
+```
+--> C0 43 00 00 00
+--< 90 00
+```
+
+#### Changing PIN
+```
+open channel
+--> C0 40 00 00 00
+--< xx xx .. 90 00 (xx = public key)
+--> C0 41 00 00 xx data 
+--< xx xx .. 90 00 (xx = authentication data)
+following data fields will be encrypted
+1. get PIN remaining tries
+--> C0 42 00 00 xx 60 00 00 MAC (xx = length of encrypted data)
+--< xx xx MAC 90 00 (xx = remaining tries)
+2. verify PIN 1234
+--> C0 42 00 00 xx 61 00 10 31 32 33 34 00 .. 00 MAC (xx = length of encrypted data)
+--< 90 00
+3. change PIN to 5678
+--> C0 42 00 00 xx 62 00 10 35 36 37 38 00 .. 00 MAC (xx = length of encrypted data)
+--< 90 00
+close channel
+--> C0 30 00 00 00
+--< 90 00
+```
+
+### Getting value of some secret by name
+```
+open channel
+--> C0 40 00 00 00
+--< xx xx .. 90 00 (xx = public key)
+--> C0 41 00 00 xx data 
+--< xx xx .. 90 00 (xx = authentication data)
+following data fields will be encrypted
+1. get PIN remaining tries
+--> C0 42 00 00 xx 60 00 00 MAC (xx = length of encrypted data)
+--< xx xx MAC 90 00 (xx = remaining tries)
+2. verify PIN 1234
+--> C0 42 00 00 xx 61 00 10 31 32 33 34 00 .. 00 MAC (xx = length of encrypted data)
+--< 90 00
+3. get value of secret abcd
+--> C0 42 00 00 xx 80 00 04 61 62 63 64 MAC (xx = length of encrypted data)
+--< xx xx .. MAC 90 00 (xx = value of secret)
+close channel
+--> C0 30 00 00 00
+--< 90 00
+```
