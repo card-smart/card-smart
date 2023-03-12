@@ -23,6 +23,8 @@
 * when no remaining tries left
   * secret data are erased from card
   * PIN set to default value
+* when sending PIN from the app
+  * pad PIN with 0's to get full length always (easier to check in the card)
   
 ### 4. Change PIN
 * checks PIN policy
