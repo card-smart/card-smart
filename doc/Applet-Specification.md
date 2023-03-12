@@ -19,7 +19,10 @@
 * PIN policy setup in the applet
 * PIN is read from cmd option
 * login operation setup status in applet filesystem
-* chekcing remaining tries log out from current status
+* checking remaining tries log out from current status
+* when no remaining tries left
+  * secret data are erased from card
+  * PIN set to default value
   
 ### 4. Change PIN
 * checks PIN policy
@@ -48,10 +51,10 @@
   * min length = 4
   * max length = 10
 * storage related information
-  * max record size = 32
+  * max record size = 64 (`HMACKey`)
   * max record number = 32
 * name policy
-  * alfanumeric characters
+  * alphanumeric characters
   * min length of name = 4
   * max length of name = 10
 
@@ -73,7 +76,7 @@ for (short i = 0; i < myObjects.length; i++) {
 * name
 * HMACKey object for secret data
 * getter
-* checksum to detect faults (hash?)
+* checksum to detect faults (`Checksum`)
 
 ### SecureChannel.java
 * generate random new key pair for secure communication
@@ -159,18 +162,19 @@ for (short i = 0; i < myObjects.length; i++) {
 | DATA | ignored |
 
 ### Secure channel error codes
-| RES      | Data field | Info                        |
-| -------- | ---------- | --------------------------- |
-| `0x9000` |            | success                     |
-| `0x6A00` |            | decryption error            |
-| `0x6A01` |            | MAC error                   |
-| `0x6B00` |            | error                       |
-| `0x6B01` |            | not logged in               |
-| `0x6B02` |            | PIN policy not satisfied    |
-| `0x6B03` |            | storage full                |
-| `0x6B04` |            | name policy not satisfied   |
-| `0x6B05` |            | secret policy not satisfied |
-| `0x6B06` |            | no such data                |
+| RES      | Data field | Info                                                  |
+|----------| ---------- |-------------------------------------------------------|
+| `0x9000` |            | success                                               |
+| `0x6A00` |            | decryption error                                      |
+| `0x6A01` |            | MAC error                                             |
+| `0x6B00` |            | error                                                 |
+| `0x6B01` |            | not logged in                                         |
+| `0x6B02` |            | out of tries, secret data deleted, PIN set to default |
+| `0x6B03` |            | PIN policy not satisfied                              |
+| `0x6B04` |            | storage full                                          |
+| `0x6B05` |            | name policy not satisfied                             |
+| `0x6B06` |            | secret policy not satisfied                           |
+| `0x6B07` |            | no such data                                          |
 
 ### Secure Get Names Length
 | APDU | Values  |
@@ -219,11 +223,12 @@ for (short i = 0; i < myObjects.length; i++) {
 | lc   | `0x10`               |
 | DATA | PIN [padded to 16 B] |
 
-| RES      | Data field | Info          |
-| -------- | ---------- | ------------- |
-| `0x9000` |            | success       |
-| `0x6B00` |            | error         |
-| `0x6B01` |            | not logged in |
+| RES      | Data field | Info                                                  |
+|----------| ---------- |-------------------------------------------------------|
+| `0x9000` |            | success                                               |
+| `0x6B00` |            | error                                                 |
+| `0x6B01` |            | not logged in                                         |
+| `0x6B02` |            | out of tries, secret data deleted, PIN set to default |
 
 ### Secure Change PIN
 | APDU | Values                   |
@@ -234,18 +239,18 @@ for (short i = 0; i < myObjects.length; i++) {
 | DATA | new pin [padded to 16 B] |
 
 | RES      | Data field | Info                     |
-| -------- | ---------- | ------------------------ |
+|----------| ---------- | ------------------------ |
 | `0x9000` |            | success                  |
 | `0x6B00` |            | error                    |
-| `0x6B02` |            | PIN policy not satisfied |
+| `0x6B03` |            | PIN policy not satisfied |
 
 ### Secure Get Length of Secret
 | APDU | Values                           |
-| ---- | -------------------------------- |
+| ---- |----------------------------------|
 | INS  | `0x70`                           |
 | OP   | `0x00`                           |
 | lc   | `0xYY` length of the wanted name |
-| DATA | ignored                          |
+| DATA | name                             |
 
 | RES      | Data field                 | Info    |
 | -------- | -------------------------- | ------- |
@@ -274,12 +279,12 @@ for (short i = 0; i < myObjects.length; i++) {
 | DATA | name length [1 B] \ name [max 10 B] \ secret |
 
 | RES      | Data field | Info                        |
-| -------- | ---------- | --------------------------- |
+|----------| ---------- | --------------------------- |
 | `0x9000` |            | success                     |
 | `0x6B00` |            | error                       |
-| `0x6B03` |            | storage full                |
-| `0x6B04` |            | name policy not satisfied   |
-| `0x6B05` |            | secret policy not satisfied |
+| `0x6B04` |            | storage full                |
+| `0x6B05` |            | name policy not satisfied   |
+| `0x6B06` |            | secret policy not satisfied |
 
 
 ### Secure Delete Secret
@@ -290,11 +295,11 @@ for (short i = 0; i < myObjects.length; i++) {
 | lc   | `0xBB` length of name |
 | DATA | name                  |
 
-| RES      | Data field  | Info         |
-| -------- | ----------- | ------------ |
-| `0x9000` | secret data | success      |
-| `0x6B00` |             | error        |
-| `0x6B06` |             | no such data |
+| RES      | Data field | Info         |
+|----------|------------| ------------ |
+| `0x9000` |            | success      |
+| `0x6B00` |            | error        |
+| `0x6B07` |            | no such data |
 
 ## Workflows
 
