@@ -7,9 +7,12 @@ import javacard.security.HMACKey;
 import javacard.security.KeyBuilder;
 
 import static applet.CardSmartApplet.*;
+import static javacard.framework.Util.arrayCompare;
+import static javacard.framework.Util.arrayFill;
 
 public class Record {
     private final byte[] name;
+    private byte nameLen;
     private final HMACKey secret;
     private final Checksum checksum;
     private final byte[] crc;
@@ -22,6 +25,7 @@ public class Record {
     public Record() {
         /* Prepare empty name of secret */
         name = new byte[NAME_MAX_LEN];
+        nameLen = 0;
 
         /* Prepare empty secret */
         byte[] initSecret = JCSystem.makeTransientByteArray((short) 64, JCSystem.CLEAR_ON_DESELECT);
@@ -41,7 +45,8 @@ public class Record {
         if (length < NAME_MIN_LEN || length > NAME_MAX_LEN) {
             throw new InvalidArgumentException("Wrong length of the name.");
         }
-        Util.arrayCopyNonAtomic(name, (short) 0, this.name, (byte) 0, (byte) length);
+        Util.arrayCopyNonAtomic(name, (short) 0, this.name, (byte) 0, length);
+        nameLen = length;
     }
 
     /*
@@ -62,15 +67,6 @@ public class Record {
         this.secret.setKey(secret, (byte) 0, length);
     }
 
-    private byte checkCRC(byte[] crc, byte[] current) {
-        for (int i = 0; i < CRC_LEN; i++) {
-            if (crc[i] != current[i]) {
-                return 1;
-            }
-        }
-        return 0;
-    }
-
     /*
      * Get value of secret
      */
@@ -84,7 +80,7 @@ public class Record {
 
         /* Compute checksum of secret */
         checksum.doFinal(buffer, (short) 0, secretLen, tempArray, (short) 0);
-        if (checkCRC(crc, tempArray) != 0) {
+        if (arrayCompare(crc, (short) 0, tempArray, (short) 0, CRC_LEN) != 0) {
             throw new ConsistencyException("CRC does not match");
         }
 
@@ -98,5 +94,19 @@ public class Record {
         this.setName(name, nameLen);
         this.setSecret(secret, secretLen);
         checksum.doFinal(secret, (short) 0, secretLen, crc, (short) 0);
+    }
+
+    /*
+     * Erase record value, name and checksum
+     */
+    public void eraseRecord() {
+        this.secret.clearKey();
+        arrayFill(this.name, (byte) 0, NAME_MAX_LEN, (byte) 0);
+        arrayFill(this.crc, (byte) 0, CRC_LEN, (byte) 0);
+        arrayFill(this.tempArray, (byte) 0, CRC_LEN, (byte) 0);
+    }
+
+    public byte isEmpty() {
+        return (byte) (nameLen > 0 ? 1 : 0);
     }
 }
