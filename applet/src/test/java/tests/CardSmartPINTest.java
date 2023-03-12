@@ -164,4 +164,79 @@ public class CardSmartPINTest extends BaseTest {
         Assertions.assertEquals(1, responseAPDU.getData().length);
         Assertions.assertEquals(responseAPDU.getData()[0], PIN_MAX_TRIES);
     }
+
+    /* Change PIN without logging in */
+    @Test
+    public void changePIN_notLogged() throws Exception {
+        CardManager card = connect();
+        /* Try to change PIN when not logged in */
+        byte[] newPIN = {0x30, 0x30, 0x30, 0x31, 0, 0, 0, 0, 0, 0};
+        CommandAPDU cmd = new CommandAPDU(0xC0, 0x62, 0x00, 0x00, newPIN);
+        ResponseAPDU responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x6B01, responseAPDU.getSW());
+        Assertions.assertNotNull(responseAPDU.getBytes());
+
+        /* Remaining tries should stay unchanged */
+        cmd = new CommandAPDU(0xC0, 0x60, 0x00, 0x00);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        Assertions.assertNotNull(responseAPDU.getBytes());
+        Assertions.assertEquals(1, responseAPDU.getData().length);
+        Assertions.assertEquals(responseAPDU.getData()[0], PIN_MAX_TRIES);
+    }
+
+    @Test
+    public void changePIN_short() throws Exception {
+        CardManager card = connect();
+        /* Test verify on default PIN */
+        byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
+        CommandAPDU cmd = new CommandAPDU(0xC0, 0x61, 0x00, 0x00, data);
+        ResponseAPDU responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+
+        /* Set new PIN which does not have correct length  */
+        byte[] newPIN = {0x30, 0x30, 0x30, 0x31, 0, 0, 0};
+        cmd = new CommandAPDU(0xC0, 0x62, 0x00, 0x00, newPIN);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x6B03, responseAPDU.getSW());
+        Assertions.assertNotNull(responseAPDU.getBytes());
+    }
+
+    @Test
+    public void changePIN_correct() throws Exception {
+        CardManager card = connect();
+        /* Test verify on default PIN */
+        byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
+        CommandAPDU cmd = new CommandAPDU(0xC0, 0x61, 0x00, 0x00, data);
+        ResponseAPDU responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+
+        /* Set new PIN which does not have correct length  */
+        byte[] newPIN = {0x30, 0x30, 0x30, 0x31, 0, 0, 0, 0, 0, 0};
+        cmd = new CommandAPDU(0xC0, 0x62, 0x00, 0x00, newPIN);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        Assertions.assertNotNull(responseAPDU.getBytes());
+
+        /* Remaining tries should stay unchanged */
+        cmd = new CommandAPDU(0xC0, 0x60, 0x00, 0x00);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        Assertions.assertNotNull(responseAPDU.getBytes());
+        Assertions.assertEquals(1, responseAPDU.getData().length);
+        Assertions.assertEquals(responseAPDU.getData()[0], PIN_MAX_TRIES);
+
+        /* Log again */
+        cmd = new CommandAPDU(0xC0, 0x61, 0x00, 0x00, newPIN);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+    }
 }
