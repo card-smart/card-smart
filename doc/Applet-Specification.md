@@ -175,6 +175,8 @@ for (short i = 0; i < myObjects.length; i++) {
 | `0x6B05` |            | name policy not satisfied                             |
 | `0x6B06` |            | secret policy not satisfied                           |
 | `0x6B07` |            | no such data                                          |
+| `0x6C00` |            | unsupported CLA                                       |
+| `0x6C01` |            | unsupported INS                                       |
 
 ### Secure Get Names Length
 | APDU | Values  |
