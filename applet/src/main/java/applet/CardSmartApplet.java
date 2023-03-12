@@ -123,6 +123,9 @@ public class CardSmartApplet extends Applet {
                     case INS_PIN_VERIFY:
                         verifyPIN(apdu);
                         break;
+                    case INS_PIN_CHANGE:
+                        changePIN(apdu);
+                        break;
                     default:
                         // The INS code is not supported by the dispatcher
                         ISOException.throwIt(RES_UNSUPPORTED_INS);
@@ -166,8 +169,28 @@ public class CardSmartApplet extends Applet {
         this.setUserAuthenticated(true);
     }
 
+    void changePIN(APDU apdu) {
+        byte[] apdubuf = apdu.getBuffer();
+        short dataLen = apdu.setIncomingAndReceive();
+
+        /* Check whether user is authenticated */
+        if (!this.getUserAuthenticated()) {
+            ISOException.throwIt(RES_ERR_NOT_LOGGED);
+        }
+        /* Check that PIN has correct length = maximal length */
+        if (dataLen != PIN_MAX_LEN) {
+            ISOException.throwIt(RES_ERR_PIN_POLICY);
+        }
+        /* Set new user PIN */
+        pin.update(apdubuf, ISO7816.OFFSET_CDATA, (byte) dataLen);
+    }
+
     private void setUserAuthenticated(boolean isAuthenticated) {
         this.isUserAuthenticated[0] = isAuthenticated;
+    }
+
+    private boolean getUserAuthenticated() {
+        return this.isUserAuthenticated[0];
     }
 
     private void resetSecretData() {
