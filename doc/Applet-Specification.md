@@ -48,13 +48,13 @@
 #### Static information
 * definition of APDU instructions
 * PIN related contants
-  * inital PIN value = 0000
+  * inital PIN value = 0000 (in ASCII), padded to 10 bytes (pin max length)
   * max tries = 5
   * min length = 4
   * max length = 10
 * storage related information
   * max record size = 64 (`HMACKey`)
-  * max record number = 32
+  * max record number = 16
 * name policy
   * alphanumeric characters
   * min length of name = 4
@@ -112,6 +112,7 @@ for (short i = 0; i < myObjects.length; i++) {
   ```
   LEN | VALUE
   ```
+  * by default, the `OP` in the inner APDU is only byte, it can be also used as `P1` while `P2 = 0x00`
 
 ### Unsecure Get Card EC Public Key
 | APDU | Values  |
