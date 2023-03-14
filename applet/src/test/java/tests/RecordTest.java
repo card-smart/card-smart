@@ -4,8 +4,6 @@ import applet.Record;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-
 class RecordTest {
 
     @Test
@@ -37,7 +35,7 @@ class RecordTest {
         byte[] buffer = new byte[10];
         byte[] nameBuffer = new byte[4];
         try {
-            byte secretLen = record.getSecret(buffer);
+            short secretLen = record.getSecret(buffer);
             Assertions.assertEquals(secret.length, secretLen);
         } catch (Exception e) {
             Assertions.fail("Get secret failed");
