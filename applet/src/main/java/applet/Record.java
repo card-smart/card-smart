@@ -10,7 +10,7 @@ import static applet.CardSmartApplet.*;
 
 public class Record {
     private final byte[] name;
-    private byte nameLen;
+    private byte nameLength;
     private final HMACKey secret;
     private final Checksum checksum;
     private final byte[] crc;
@@ -22,45 +22,48 @@ public class Record {
      */
     public Record() {
         /* Prepare empty name of secret */
-        name = new byte[NAME_MAX_LEN];
-        nameLen = 0;
+        this.name = new byte[NAME_MAX_LEN];
+        this.nameLength = 0;
 
         /* Prepare empty secret */
         byte[] initSecret = JCSystem.makeTransientByteArray((short) 64, JCSystem.CLEAR_ON_DESELECT);
-        secret = (HMACKey) KeyBuilder.buildKey(KeyBuilder.TYPE_HMAC, KeyBuilder.LENGTH_HMAC_SHA_256_BLOCK_64, false);
-        secret.setKey(initSecret, (short) 0, SECRET_MAX_LEN);
+        this.secret = (HMACKey) KeyBuilder.buildKey(KeyBuilder.TYPE_HMAC, KeyBuilder.LENGTH_HMAC_SHA_256_BLOCK_64, false);
+        this.secret.setKey(initSecret, (short) 0, SECRET_MAX_LEN);
 
         /* Initialize checksum */
-        checksum = Checksum.getInstance(Checksum.ALG_ISO3309_CRC32, false);
-        crc = new byte[CRC_LEN];
-        tempArray = JCSystem.makeTransientByteArray(CRC_LEN, JCSystem.CLEAR_ON_DESELECT);
+        this.checksum = Checksum.getInstance(Checksum.ALG_ISO3309_CRC32, false);
+        this.crc = new byte[CRC_LEN];
+        this.tempArray = JCSystem.makeTransientByteArray(CRC_LEN, JCSystem.CLEAR_ON_DESELECT);
     }
 
     /*
-     * Set new name to record
+     * This method sets the name of an object, based on a byte array and its length
      */
     private void setName(byte[] name, byte length) throws InvalidArgumentException {
+        if (name.length == 0 && length != 0) {
+            throw new InvalidArgumentException("Name cannot be empty.");
+        }
         if (length < NAME_MIN_LEN || length > NAME_MAX_LEN) {
             throw new InvalidArgumentException("Wrong length of the name.");
         }
         Util.arrayCopyNonAtomic(name, (short) 0, this.name, (byte) 0, length);
-        nameLen = length;
+        this.nameLength = length;
     }
 
     /*
-     * Get name of the record
+     * A public method to get the name stored in a Record by copying it to the provided buffer.
      */
     public byte getName(byte[] buffer) throws InvalidArgumentException, StorageException {
-        if (buffer.length < nameLen) {
+        if (buffer.length < this.nameLength) {
             throw new InvalidArgumentException("Buffer too small.");
         }
         try {
-            Util.arrayCopyNonAtomic(name, (short) 0, buffer, (byte) 0, nameLen);
+            Util.arrayCopyNonAtomic(name, (short) 0, buffer, (byte) 0, this.nameLength);
         } catch (Exception e) {
             throw new StorageException("Cannot copy secret name.");
         }
 
-        return nameLen;
+        return this.nameLength;
     }
 
     /*
@@ -72,31 +75,31 @@ public class Record {
         }
         try {
             this.secret.clearKey();
+            this.secret.setKey(secret, (byte) 0, length);
         } catch (Exception e) {
             throw new StorageException("Can not clear key");
         }
-        this.secret.setKey(secret, (byte) 0, length);
     }
 
     /*
      * Get value of secret
      * The output buffer needs to have sufficient length
      */
-    public byte getSecret(byte[] buffer) throws InvalidArgumentException, ConsistencyException {
+    public short getSecret(byte[] buffer) throws InvalidArgumentException, ConsistencyException {
         if (buffer.length < SECRET_MIN_LEN || buffer.length > SECRET_MAX_LEN) {
             throw new InvalidArgumentException("Wrong length of the buffer for secret.");
         }
 
         /* Get value of secret */
-        byte secretLen = this.secret.getKey(buffer, (short) 0);
+        byte secretLength = this.secret.getKey(buffer, (short) 0);
 
         /* Compute checksum of secret */
-        checksum.doFinal(buffer, (short) 0, secretLen, tempArray, (short) 0);
+        checksum.doFinal(buffer, (short) 0, secretLength, tempArray, (short) 0);
         if (Util.arrayCompare(crc, (short) 0, tempArray, (short) 0, CRC_LEN) != 0) {
             throw new ConsistencyException("CRC does not match");
         }
 
-        return secretLen;
+        return secretLength;
     }
 
     /*
@@ -117,13 +120,13 @@ public class Record {
         } catch (Exception e) {
             throw new StorageException("Can not clear key");
         }
-        nameLen = 0;
+        nameLength = 0;
         Util.arrayFillNonAtomic(name, (short) 0, (short) name.length, (byte) 0);
         Util.arrayFillNonAtomic(crc, (short) 0, (short) crc.length, (byte) 0);
         Util.arrayFillNonAtomic(tempArray, (short) 0, (short) tempArray.length, (byte) 0);
     }
 
     public byte isEmpty() {
-        return (byte) (nameLen > 0 ? 1 : 0);
+        return (byte) (nameLength > 0 ? 1 : 0);
     }
 }
