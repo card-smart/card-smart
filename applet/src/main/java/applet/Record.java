@@ -7,7 +7,6 @@ import javacard.security.HMACKey;
 import javacard.security.KeyBuilder;
 
 import static applet.CardSmartApplet.*;
-import static javacard.framework.Util.*;
 
 public class Record {
     private final byte[] name;
