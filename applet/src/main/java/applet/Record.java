@@ -7,8 +7,7 @@ import javacard.security.HMACKey;
 import javacard.security.KeyBuilder;
 
 import static applet.CardSmartApplet.*;
-import static javacard.framework.Util.arrayCompare;
-import static javacard.framework.Util.arrayFill;
+import static javacard.framework.Util.*;
 
 public class Record {
     private final byte[] name;
@@ -35,7 +34,7 @@ public class Record {
         /* Initialize checksum */
         checksum = Checksum.getInstance(Checksum.ALG_ISO3309_CRC32, false);
         crc = new byte[CRC_LEN];
-        tempArray = JCSystem.makeTransientByteArray((short) CRC_LEN, JCSystem.CLEAR_ON_DESELECT);
+        tempArray = JCSystem.makeTransientByteArray(CRC_LEN, JCSystem.CLEAR_ON_DESELECT);
     }
 
     /*
@@ -52,35 +51,49 @@ public class Record {
     /*
      * Get name of the record
      */
-    public byte[] getName() {
-        return name;
+    public byte getName(byte[] buffer) throws InvalidArgumentException, StorageException {
+        if (buffer.length < nameLen) {
+            throw new InvalidArgumentException("Buffer too small.");
+        }
+        try {
+            Util.arrayCopyNonAtomic(name, (short) 0, buffer, (byte) 0, nameLen);
+        } catch (Exception e) {
+            throw new StorageException("Cannot copy secret name.");
+        }
+
+        return nameLen;
     }
 
     /*
      * Clear previous secret and set its name
      */
-    private void setSecret(byte[] secret, byte length) throws InvalidArgumentException {
+    private void setSecret(byte[] secret, byte length) throws InvalidArgumentException, StorageException {
         if (length < SECRET_MIN_LEN || length > SECRET_MAX_LEN) {
             throw new InvalidArgumentException("Wrong length of the secret.");
         }
-        this.secret.clearKey();
+        try {
+            this.secret.clearKey();
+        } catch (Exception e) {
+            throw new StorageException("Can not clear key");
+        }
         this.secret.setKey(secret, (byte) 0, length);
     }
 
     /*
      * Get value of secret
+     * The output buffer needs to have sufficient length
      */
-    public byte getSecret(byte[] buffer, byte length) throws InvalidArgumentException, ConsistencyException {
-        if (length < SECRET_MIN_LEN || length > SECRET_MAX_LEN) {
+    public byte getSecret(byte[] buffer) throws InvalidArgumentException, ConsistencyException {
+        if (buffer.length < SECRET_MIN_LEN || buffer.length > SECRET_MAX_LEN) {
             throw new InvalidArgumentException("Wrong length of the buffer for secret.");
         }
 
         /* Get value of secret */
-        byte secretLen = this.secret.getKey(buffer, length);
+        byte secretLen = this.secret.getKey(buffer, (short) 0);
 
         /* Compute checksum of secret */
         checksum.doFinal(buffer, (short) 0, secretLen, tempArray, (short) 0);
-        if (arrayCompare(crc, (short) 0, tempArray, (short) 0, CRC_LEN) != 0) {
+        if (Util.arrayCompare(crc, (short) 0, tempArray, (short) 0, CRC_LEN) != 0) {
             throw new ConsistencyException("CRC does not match");
         }
 
@@ -90,7 +103,7 @@ public class Record {
     /*
      * Initialize record value and checksum
      */
-    public void initRecord(byte[] name, byte nameLen, byte[] secret, byte secretLen) throws InvalidArgumentException {
+    public void initRecord(byte[] name, byte nameLen, byte[] secret, byte secretLen) throws InvalidArgumentException, StorageException {
         this.setName(name, nameLen);
         this.setSecret(secret, secretLen);
         checksum.doFinal(secret, (short) 0, secretLen, crc, (short) 0);
@@ -99,11 +112,16 @@ public class Record {
     /*
      * Erase record value, name and checksum
      */
-    public void eraseRecord() {
-        this.secret.clearKey();
-        arrayFill(this.name, (byte) 0, NAME_MAX_LEN, (byte) 0);
-        arrayFill(this.crc, (byte) 0, CRC_LEN, (byte) 0);
-        arrayFill(this.tempArray, (byte) 0, CRC_LEN, (byte) 0);
+    public void eraseRecord() throws StorageException {
+        try {
+            this.secret.clearKey();
+        } catch (Exception e) {
+            throw new StorageException("Can not clear key");
+        }
+        nameLen = 0;
+        Util.arrayFillNonAtomic(name, (short) 0, (short) name.length, (byte) 0);
+        Util.arrayFillNonAtomic(crc, (short) 0, (short) crc.length, (byte) 0);
+        Util.arrayFillNonAtomic(tempArray, (short) 0, (short) tempArray.length, (byte) 0);
     }
 
     public byte isEmpty() {
