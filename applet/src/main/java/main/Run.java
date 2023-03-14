@@ -1,11 +1,9 @@
 package main;
 
 import applet.CardSmartApplet;
-import applet.HelloWorldApplet;
 import com.licel.jcardsim.smartcardio.CardSimulator;
 import com.licel.jcardsim.utils.AIDUtil;
 import javacard.framework.AID;
-import javacard.framework.Util;
 
 import javax.smartcardio.*;
 

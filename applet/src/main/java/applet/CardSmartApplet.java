@@ -74,6 +74,7 @@ public class CardSmartApplet extends Applet {
     /*
      * Other instances
      */
+    FileSystem fileSystem;
     private static final short TEMP_ARRAY_LEN = (short) 256;
     private byte[] tempArray = null;
     private boolean[] isUserAuthenticated = null;
@@ -81,7 +82,7 @@ public class CardSmartApplet extends Applet {
     public CardSmartApplet(byte[] bArray, short bOffset, byte bLength) {
 
         /* Create temporary array */
-        tempArray = JCSystem.makeTransientByteArray((short) 256, JCSystem.CLEAR_ON_DESELECT);
+        tempArray = JCSystem.makeTransientByteArray(TEMP_ARRAY_LEN, JCSystem.CLEAR_ON_DESELECT);
 
         /* Set initial PIN */
         pin = new OwnerPIN(PIN_MAX_TRIES, PIN_MAX_LEN); // 5 tries, max 10 digits in pin
@@ -89,6 +90,9 @@ public class CardSmartApplet extends Applet {
 
         /* Create array for user authentication */
         this.isUserAuthenticated = JCSystem.makeTransientBooleanArray((short) 1, JCSystem.CLEAR_ON_DESELECT);
+
+        /* Initialize filesystem with empty records */
+        fileSystem = new FileSystem();
 
         register();
     }
