@@ -172,6 +172,6 @@ public class FileSystem {
             Util.arrayCopyNonAtomic(this.tempArray, (short) 0, outputBuffer, (short) (offset + 1), len);
             offset += 1 + len;
         }
-        return 0;
+        return offset;
     }
 }
