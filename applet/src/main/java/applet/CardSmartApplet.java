@@ -82,17 +82,17 @@ public class CardSmartApplet extends Applet {
     public CardSmartApplet(byte[] bArray, short bOffset, byte bLength) {
 
         /* Create temporary array */
-        tempArray = JCSystem.makeTransientByteArray(TEMP_ARRAY_LEN, JCSystem.CLEAR_ON_DESELECT);
+        this.tempArray = JCSystem.makeTransientByteArray(TEMP_ARRAY_LEN, JCSystem.CLEAR_ON_DESELECT);
 
         /* Set initial PIN */
-        pin = new OwnerPIN(PIN_MAX_TRIES, PIN_MAX_LEN); // 5 tries, max 10 digits in pin
-        pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
+        this.pin = new OwnerPIN(PIN_MAX_TRIES, PIN_MAX_LEN); // 5 tries, max 10 digits in pin
+        this.pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
 
         /* Create array for user authentication */
         this.isUserAuthenticated = JCSystem.makeTransientBooleanArray((short) 1, JCSystem.CLEAR_ON_DESELECT);
 
         /* Initialize filesystem with empty records */
-        fileSystem = new FileSystem();
+        this.fileSystem = new FileSystem();
 
         register();
     }
@@ -102,6 +102,7 @@ public class CardSmartApplet extends Applet {
         new CardSmartApplet(bArray, bOffset, bLength);
     }
 
+    @Override
     public boolean select() {
         // TODO: Clear session data here
         return true;
@@ -122,13 +123,13 @@ public class CardSmartApplet extends Applet {
             if (apduBuffer[ISO7816.OFFSET_CLA] == CLA_CARDSMARTAPPLET) {
                 switch (apduBuffer[ISO7816.OFFSET_INS]) {
                     case INS_PIN_TRIES:
-                        getPINTries(apdu);
+                        this.getPINTries(apdu);
                         break;
                     case INS_PIN_VERIFY:
-                        verifyPIN(apdu);
+                        this.verifyPIN(apdu);
                         break;
                     case INS_PIN_CHANGE:
-                        changePIN(apdu);
+                        this.changePIN(apdu);
                         break;
                     default:
                         // The INS code is not supported by the dispatcher
@@ -147,23 +148,23 @@ public class CardSmartApplet extends Applet {
     }
 
     void getPINTries(APDU apdu) {
-        byte[] apdubuf = apdu.getBuffer();
-        short dataLen = apdu.setIncomingAndReceive();
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
 
         byte tries = pin.getTriesRemaining();
         tempArray[0] = tries;
-        Util.arrayCopyNonAtomic(tempArray, (short) 0, apdubuf, ISO7816.OFFSET_CDATA, (short) 1);
+        Util.arrayCopyNonAtomic(this.tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA, (short) 1);
 
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, (short) 1);
     }
 
     void verifyPIN(APDU apdu) {
-        byte[] apdubuf = apdu.getBuffer();
-        short dataLen = apdu.setIncomingAndReceive();
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
 
         /* Verify pin*/
-        if(!pin.check(apdubuf, ISO7816.OFFSET_CDATA, PIN_MAX_LEN)) {
-            byte tries = pin.getTriesRemaining();
+        if(!this.pin.check(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN)) {
+            byte tries = this.pin.getTriesRemaining();
             if (tries == 0) {
                 this.resetSecretData();
             }
@@ -174,19 +175,19 @@ public class CardSmartApplet extends Applet {
     }
 
     void changePIN(APDU apdu) {
-        byte[] apdubuf = apdu.getBuffer();
-        short dataLen = apdu.setIncomingAndReceive();
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
 
         /* Check whether user is authenticated */
         if (!this.getUserAuthenticated()) {
             ISOException.throwIt(RES_ERR_NOT_LOGGED);
         }
         /* Check that PIN has correct length = maximal length */
-        if (dataLen != PIN_MAX_LEN) {
+        if (dataLength != PIN_MAX_LEN) {
             ISOException.throwIt(RES_ERR_PIN_POLICY);
         }
         /* Set new user PIN */
-        pin.update(apdubuf, ISO7816.OFFSET_CDATA, (byte) dataLen);
+        pin.update(apduBuffer, ISO7816.OFFSET_CDATA, (byte) dataLength);
     }
 
     private void setUserAuthenticated(boolean isAuthenticated) {
@@ -200,8 +201,8 @@ public class CardSmartApplet extends Applet {
     private void resetSecretData() {
         //Util.arrayFillNonAtomic(tempArray, (short) 0, (short) TEMP_ARRAY_LEN, (byte) 0);
         eraseSecretData();
-        pin.reset();
-        pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
+        this.pin.reset();
+        this.pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
     }
 
     private void eraseSecretData() {
