@@ -13,9 +13,9 @@ import javax.smartcardio.ResponseAPDU;
  *
  * @author xsvenda, Dusan Klinec (ph4r05)
  */
-public class AppletTest extends BaseTest {
+public class CardSmartBasicTest extends BaseTest {
     
-    public AppletTest() {
+    public CardSmartBasicTest() {
         // Change card type here if you want to use physical card
         setCardType(CardType.JCARDSIMLOCAL);
     }
@@ -36,13 +36,23 @@ public class AppletTest extends BaseTest {
     public void tearDownMethod() throws Exception {
     }
 
-    // Example test
+    /* Unknown CLA byte */
     @Test
-    public void hello() throws Exception {
-        final CommandAPDU cmd = new CommandAPDU(0x00, 0x90, 0, 0);
+    public void wrongCLA() throws Exception {
+        CommandAPDU cmd = new CommandAPDU(0xC1, 0x90, 0x00, 0x00);
         final ResponseAPDU responseAPDU = connect().transmit(cmd);
         Assert.assertNotNull(responseAPDU);
-        Assert.assertEquals(0x9000, responseAPDU.getSW());
-        Assert.assertNotNull(responseAPDU.getBytes());
+        Assert.assertEquals(0x6C00, responseAPDU.getSW());
+        //Assert.assertNotNull(responseAPDU.getBytes());
+    }
+
+    /* Unknown INS byte */
+    @Test
+    public void unknownINS() throws Exception {
+        CommandAPDU cmd = new CommandAPDU(0xC0, 0x10, 0x00, 0x00);
+        final ResponseAPDU responseAPDU = connect().transmit(cmd);
+        Assert.assertNotNull(responseAPDU);
+        Assert.assertEquals(0x6C01, responseAPDU.getSW());
+        //Assert.assertNotNull(responseAPDU.getBytes());
     }
 }
