@@ -27,10 +27,16 @@ class FileSystemTest {
         FileSystem fs = new FileSystem();
         Assertions.assertEquals(fs.getNumberOfRecords(), 0);
 
-        byte[] name = {1, 2, 3, 4};
-        byte[] secret = {1, 2, 3, 4, 5};
+//        byte[] name = {1, 2, 3, 4};
+//        byte[] secret = {1, 2, 3, 4, 5};
+        byte[] values = {4, 1, 2, 3, 4, 1, 2, 3, 4, 5};
+        byte nameLength = values[0];
+        byte secretLength = (byte) (values.length - nameLength - 1);
+        byte[] buffer = new byte[256];
+        System.arraycopy(values, 0, buffer, 0, values.length);
+
         try {
-            fs.createRecord(name, (byte) name.length, secret, (byte) secret.length);
+            fs.createRecord(buffer, nameLength, (short) 1, secretLength, (short) (1 + nameLength));
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }
@@ -43,23 +49,41 @@ class FileSystemTest {
         Assertions.assertEquals(fs.getNumberOfRecords(), 0);
 
         try {
-            byte[] name = {1, 2, 3, 4};
-            byte[] secret = {1, 2, 3, 4, 5};
-            fs.createRecord(name, (byte) name.length, secret, (byte) secret.length);
+//            byte[] name = {1, 2, 3, 4};
+//            byte[] secret = {1, 2, 3, 4, 5};
+            byte[] values = {4, 1, 2, 3, 4, 1, 2, 3, 4, 5};
+            byte nameLength = values[0];
+            byte secretLength = (byte) (values.length - nameLength - 1);
+            byte[] buffer = new byte[256];
+            System.arraycopy(values, 0, buffer, 0, values.length);
+
+            fs.createRecord(buffer, nameLength, (short) 1, secretLength, (short) (1 + nameLength));
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }
         try {
-            byte[] name = {2, 2, 3, 4};
-            byte[] secret = {1, 2, 3, 4, 5};
-            fs.createRecord(name, (byte) name.length, secret, (byte) secret.length);
+//            byte[] name = {2, 2, 3, 4};
+//            byte[] secret = {1, 2, 3, 4, 5};
+            byte[] values = {4, 2, 2, 3, 4, 1, 2, 3, 4, 5};
+            byte nameLength = values[0];
+            byte secretLength = (byte) (values.length - nameLength - 1);
+            byte[] buffer = new byte[256];
+            System.arraycopy(values, 0, buffer, 0, values.length);
+
+            fs.createRecord(buffer, nameLength, (short) 1, secretLength, (short) (1 + nameLength));
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }
         try {
-            byte[] name = {3, 2, 3, 4};
-            byte[] secret = {1, 2, 3, 4, 5};
-            fs.createRecord(name, (byte) name.length, secret, (byte) secret.length);
+//            byte[] name = {3, 2, 3, 4};
+//            byte[] secret = {1, 2, 3, 4, 5};
+            byte[] values = {4, 3, 2, 3, 4, 1, 2, 3, 4, 5};
+            byte nameLength = values[0];
+            byte secretLength = (byte) (values.length - nameLength - 1);
+            byte[] buffer = new byte[256];
+            System.arraycopy(values, 0, buffer, 0, values.length);
+
+            fs.createRecord(buffer, nameLength, (short) 1, secretLength, (short) (1 + nameLength));
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }
@@ -73,8 +97,15 @@ class FileSystemTest {
 
         byte[] name = {1, 2, 3, 4};
         byte[] secret = {1, 2, 3, 4, 5};
+        byte[] values = {4, 1, 2, 3, 4, 1, 2, 3, 4, 5};
+        byte nameLength = values[0];
+        byte secretLength = (byte) (values.length - nameLength - 1);
+        byte[] buffer = new byte[256];
+        System.arraycopy(values, 0, buffer, 0, values.length);
+
+
         try {
-            fs.createRecord(name, (byte) name.length, secret, (byte) secret.length);
+            fs.createRecord(buffer, nameLength, (short) 1, secretLength, (short) (1 + nameLength));
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }
@@ -95,18 +126,23 @@ class FileSystemTest {
 
         byte[] name = {1, 2, 3, 4};
         byte[] secret = {1, 2, 3, 4, 5};
+        byte[] values = {4, 1, 2, 3, 4, 1, 2, 3, 4, 5};
+        byte nameLength = values[0];
+        byte secretLength = (byte) (values.length - nameLength - 1);
+        byte[] buffer = new byte[256];
+        System.arraycopy(values, 0, buffer, 0, values.length);
         try {
-            fs.createRecord(name, (byte) name.length, secret, (byte) secret.length);
+            fs.createRecord(buffer, nameLength, (short) 1, secretLength, (short) (1 + nameLength));
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }
         Assertions.assertEquals(fs.getNumberOfRecords(), 1);
 
         try {
-            byte[] buffer = new byte[5];
-            short len = fs.getSecretByName(name, (byte)name.length, buffer);
+            byte[] buffer2 = new byte[5];
+            short len = fs.getSecretByName(name, (byte)name.length, buffer2);
             Assertions.assertEquals(len, secret.length);
-            Assertions.assertArrayEquals(secret, buffer);
+            Assertions.assertArrayEquals(secret, buffer2);
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }
@@ -118,16 +154,26 @@ class FileSystemTest {
         Assertions.assertEquals(fs.getNumberOfRecords(), 0);
 
         try {
-            byte[] name = {1, 2, 3, 4};
-            byte[] secret = {1, 2};
-            fs.createRecord(name, (byte) name.length, secret, (byte) secret.length);
+//            byte[] name = {1, 2, 3, 4};
+//            byte[] secret = {1, 2};
+            byte[] values = {4, 1, 2, 3, 4, 1, 2};
+            byte nameLength = values[0];
+            byte secretLength = (byte) (values.length - nameLength - 1);
+            byte[] buffer = new byte[256];
+            System.arraycopy(values, 0, buffer, 0, values.length);
+            fs.createRecord(buffer, nameLength, (short) 1, secretLength, (short) (1 + nameLength));
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }
         try {
-            byte[] name = {2, 2, 3, 4};
-            byte[] secret = {4, 5};
-            fs.createRecord(name, (byte) name.length, secret, (byte) secret.length);
+//            byte[] name = {2, 2, 3, 4};
+//            byte[] secret = {4, 5};
+            byte[] values = {4, 2, 2, 3, 4, 4, 5};
+            byte nameLength = values[0];
+            byte secretLength = (byte) (values.length - nameLength - 1);
+            byte[] buffer = new byte[256];
+            System.arraycopy(values, 0, buffer, 0, values.length);
+            fs.createRecord(buffer, nameLength, (short) 1, secretLength, (short) (1 + nameLength));
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }

@@ -84,24 +84,27 @@ public class FileSystem {
     /**
      * Store name and secret in the first empty record slot
      *
-     * @param name    A byte[] containing the name.
+     * @param buffer    A temporary byte[] containing the name and secret.
      * @param nameLength The length of the name.
-     * @param secret  A byte[] containing the secret to store.
+     * @param nameOffset  offset of the name in buffer
      * @param secretLength The length of the secret
+     * @param secretOffset  offset of the secret in buffer
      * @throw InvalidArgumentException
      * @throw StorageException
      */
-    public void createRecord(byte[] name, byte nameLength, byte[] secret, byte secretLength) throws StorageException, InvalidArgumentException {
-        if (name == null || nameLength < 0
-                || secret == null || secretLength < 0) {
+    public void createRecord(byte[] buffer, byte nameLength, short nameOffset, byte secretLength, short secretOffset) throws StorageException, InvalidArgumentException {
+        if (buffer == null || nameLength <= 0 || secretLength <= 0) {
             throw new InvalidArgumentException("Invalid arguments when creating record");
+        }
+        if (nameLength < 4 || nameLength > 10 || secretLength > 64) {
+            throw new InvalidArgumentException("Invalid name or secret length");
         }
 
         byte index = getIndexOfFirstEmptyRecord();
         if (index < 0) {
             throw new StorageException("Storage full");
         }
-        records[index].initRecord(name, nameLength, secret, secretLength);
+        records[index].initRecord(buffer, nameLength, nameOffset, secretLength, secretOffset);
         numberOfRecords++;
     }
 

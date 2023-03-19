@@ -10,8 +10,8 @@ import static applet.CardSmartApplet.*;
 
 public class Record {
     private final byte[] name;
-    private byte nameLength;
-    private final HMACKey secret;
+    private byte nameLength; // 4-10 bytes
+    private final HMACKey secret; // length: max 64 bytes
     private final Checksum checksum;
     private final byte[] crc;
     private final byte[] tempArray;
@@ -39,19 +39,20 @@ public class Record {
     /**
      * This method sets the name of an object, based on a byte array and its length
      *
-     * @param name    A byte[] containing the name
+     * @param buffer    A temporary byte[] containing the name and other things
+     * @param nameOffset  offset of name in buffer
      * @param nameLength  length of the name
      * @throw InvalidArgumentException
      * @throw StorageException
      * */
-    private void setName(byte[] name, byte nameLength) throws InvalidArgumentException {
-        if (name.length == 0 && nameLength != 0) {
+    private void setName(byte[] buffer, short nameOffset, byte nameLength) throws InvalidArgumentException {
+        if (nameLength == 0) {
             throw new InvalidArgumentException("Name cannot be empty.");
         }
         if (nameLength < NAME_MIN_LEN || nameLength > NAME_MAX_LEN) {
             throw new InvalidArgumentException("Wrong length of the name.");
         }
-        Util.arrayCopyNonAtomic(name, (short) 0, this.name, (byte) 0, nameLength);
+        Util.arrayCopyNonAtomic(buffer, nameOffset, this.name, (byte) 0, nameLength);
         this.nameLength = nameLength;
     }
 
@@ -79,18 +80,19 @@ public class Record {
     /**
      * Clear previous secret, adds new one and set its name
      *
-     * @param secret    A byte[] containing the secret
+     * @param buffer    A temporary byte[] containing the secret and other things
+     * @param secretOffset  offset of the secret in buffer
      * @param secretLength    Length of the secret
      * @throw InvalidArgumentException
      * @throw StorageException
      * */
-    private void setSecret(byte[] secret, byte secretLength) throws InvalidArgumentException, StorageException {
+    private void setSecret(byte[] buffer, short secretOffset, byte secretLength) throws InvalidArgumentException, StorageException {
         if (secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN) {
             throw new InvalidArgumentException("Wrong length of the secret.");
         }
         try {
             this.secret.clearKey();
-            this.secret.setKey(secret, (byte) 0, secretLength);
+            this.secret.setKey(buffer, secretOffset, secretLength);
         } catch (Exception e) {
             throw new StorageException("Can not clear key");
         }
@@ -125,17 +127,18 @@ public class Record {
     /**
      * Initialize record value and checksum
      *
-     * @param name    A byte[] containing the name
+     * @param buffer    A temporary byte[] containing the name and secret
+     * @param nameOffset  offset of the name in buffer
      * @param nameLength Length of the name
-     * @param secret A byte[] containing the secret
      * @param secretLength Length of the secret
+     * @param secretOffset  offset of the secret in buffer
      * @throw InvalidArgumentException
      * @throw StorageException
      * */
-    public void initRecord(byte[] name, byte nameLength, byte[] secret, byte secretLength) throws InvalidArgumentException, StorageException {
-        this.setName(name, nameLength);
-        this.setSecret(secret, secretLength);
-        checksum.doFinal(secret, (short) 0, secretLength, crc, (short) 0);
+    public void initRecord(byte[] buffer, byte nameLength, short nameOffset, byte secretLength, short secretOffset) throws InvalidArgumentException, StorageException {
+        this.setName(buffer, nameOffset, nameLength);
+        this.setSecret(buffer, secretOffset, secretLength);
+        checksum.doFinal(buffer, secretOffset, secretLength, crc, (short) 0);
     }
 
     /**
