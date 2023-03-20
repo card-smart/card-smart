@@ -50,11 +50,16 @@ public class SecureChannel {
         pairingSecret = new byte[PAIRING_SECRET_LENGTH];
     }
 
-    /*
-     * Get card's public key
+    /**
+     * Get the card's public key into the output buffer in plain form
+     *
+     * @param buffer the buffer
+     * @param offset the offset in the buffer
+     * @return the length of the public key
      */
-    public ECPublicKey getCardPublicKey(){
-        return (ECPublicKey)ecKeypair.getPublic();
+    public short getCardPublicKey(byte[] buffer, short offset) {
+        ECPublicKey pk = (ECPublicKey) ecKeypair.getPublic();
+        return pk.getW(buffer, offset);
     }
 
     /**

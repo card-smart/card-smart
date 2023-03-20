@@ -132,6 +132,9 @@ public class CardSmartApplet extends Applet {
             // APDU instruction parser
             if (apduBuffer[ISO7816.OFFSET_CLA] == CLA_CARDSMARTAPPLET) {
                 switch (apduBuffer[ISO7816.OFFSET_INS]) {
+                    case INS_GET_PUBLIC_KEY:
+                        this.getPublicKey(apdu);
+                        break;
                     case INS_INIT:
                         this.init(apdu);
                         break;
@@ -170,6 +173,14 @@ public class CardSmartApplet extends Applet {
         return this.isAppletInitialized[0];
     }
 
+    void getPublicKey(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
+
+        short keyLength = secureChannel.getCardPublicKey(apduBuffer, ISO7816.OFFSET_CDATA);
+        apdu.setOutgoingAndSend((short) 0, keyLength);
+    }
+
     void init(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
@@ -191,7 +202,7 @@ public class CardSmartApplet extends Applet {
         pin.update(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN);
 
         // 4. set pairingSecret and update current card EC keypair
-        secureChannel.initSecureChannel(apduBuffer, (short)(ISO7816.OFFSET_CDATA + PIN_MAX_LEN));
+        secureChannel.initSecureChannel(apduBuffer, (short) (ISO7816.OFFSET_CDATA + PIN_MAX_LEN));
     }
 
     private void setUserAuthenticated(boolean isAuthenticated) {
