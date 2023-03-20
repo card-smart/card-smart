@@ -27,8 +27,6 @@ class FileSystemTest {
         FileSystem fs = new FileSystem();
         Assertions.assertEquals(fs.getNumberOfRecords(), 0);
 
-//        byte[] name = {1, 2, 3, 4};
-//        byte[] secret = {1, 2, 3, 4, 5};
         byte[] values = {4, 1, 2, 3, 4, 1, 2, 3, 4, 5};
         byte nameLength = values[0];
         byte secretLength = (byte) (values.length - nameLength - 1);
@@ -49,8 +47,6 @@ class FileSystemTest {
         Assertions.assertEquals(fs.getNumberOfRecords(), 0);
 
         try {
-//            byte[] name = {1, 2, 3, 4};
-//            byte[] secret = {1, 2, 3, 4, 5};
             byte[] values = {4, 1, 2, 3, 4, 1, 2, 3, 4, 5};
             byte nameLength = values[0];
             byte secretLength = (byte) (values.length - nameLength - 1);
@@ -62,8 +58,6 @@ class FileSystemTest {
             Assertions.fail("Getting all names failed.");
         }
         try {
-//            byte[] name = {2, 2, 3, 4};
-//            byte[] secret = {1, 2, 3, 4, 5};
             byte[] values = {4, 2, 2, 3, 4, 1, 2, 3, 4, 5};
             byte nameLength = values[0];
             byte secretLength = (byte) (values.length - nameLength - 1);
@@ -75,8 +69,6 @@ class FileSystemTest {
             Assertions.fail("Getting all names failed.");
         }
         try {
-//            byte[] name = {3, 2, 3, 4};
-//            byte[] secret = {1, 2, 3, 4, 5};
             byte[] values = {4, 3, 2, 3, 4, 1, 2, 3, 4, 5};
             byte nameLength = values[0];
             byte secretLength = (byte) (values.length - nameLength - 1);
@@ -96,7 +88,6 @@ class FileSystemTest {
         Assertions.assertEquals(fs.getNumberOfRecords(), 0);
 
         byte[] name = {1, 2, 3, 4};
-        byte[] secret = {1, 2, 3, 4, 5};
         byte[] values = {4, 1, 2, 3, 4, 1, 2, 3, 4, 5};
         byte nameLength = values[0];
         byte secretLength = (byte) (values.length - nameLength - 1);
@@ -112,7 +103,7 @@ class FileSystemTest {
         Assertions.assertEquals(fs.getNumberOfRecords(), 1);
 
         try {
-            fs.deleteRecord(name, (byte) name.length);
+            fs.deleteRecord(name, (byte) name.length, (short) 0);
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }
@@ -140,7 +131,7 @@ class FileSystemTest {
 
         try {
             byte[] buffer2 = new byte[5];
-            short len = fs.getSecretByName(name, (byte)name.length, buffer2);
+            short len = fs.getSecretByName(name, (byte)name.length, (short) 0, buffer2);
             Assertions.assertEquals(len, secret.length);
             Assertions.assertArrayEquals(secret, buffer2);
         } catch (Exception e) {
@@ -154,8 +145,6 @@ class FileSystemTest {
         Assertions.assertEquals(fs.getNumberOfRecords(), 0);
 
         try {
-//            byte[] name = {1, 2, 3, 4};
-//            byte[] secret = {1, 2};
             byte[] values = {4, 1, 2, 3, 4, 1, 2};
             byte nameLength = values[0];
             byte secretLength = (byte) (values.length - nameLength - 1);
@@ -166,8 +155,6 @@ class FileSystemTest {
             Assertions.fail("Getting all names failed.");
         }
         try {
-//            byte[] name = {2, 2, 3, 4};
-//            byte[] secret = {4, 5};
             byte[] values = {4, 2, 2, 3, 4, 4, 5};
             byte nameLength = values[0];
             byte secretLength = (byte) (values.length - nameLength - 1);
