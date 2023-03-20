@@ -12,11 +12,22 @@
 * tool generated _ephemeral_ EC keypair 
 
 ### **Card** Secure Channel Initialization
-* instance of class is create in applet
-* _persistent_ static EC keypair is generated
+* pairingSecret is set
+* new _persistent_ static EC keypair is generated
 
 ### Pairing
-* TODO
+1. tool sends APDU for getting card's public key
+2. card sends its public key to tool
+3. tool does
+    * simpleDerivedSecret = ECDH(tool.privatekey, card.publickey)
+    * IV = randomData(16)
+    * pairingSecret = randomData(32)
+    * payload = AES_encrypt(IV; PIN | pairingSecret)
+4. tool sends [tool.pubkey | IV | payload] to the card
+5. card does
+    * simpleDerivedSecret = ECDH(card.privatekey, tool.publickey)
+    * PIN | pairingSecret = AES_decrypt(IV; payload)
+=> both card and tool has pairing secret
 
 ### Open Secure Channel
 1. tool sends APDU for getting card's public key
