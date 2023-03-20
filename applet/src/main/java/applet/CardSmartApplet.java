@@ -18,9 +18,8 @@ public class CardSmartApplet extends Applet {
     /* Unsecure Close Secure Channel */
     protected static final byte INS_CLOSE_SC = (byte)0x43;
     /* Secure Get Names Length */
-    protected static final byte INS_NAMES_LEN = (byte)0x50;
     /* Secure Get Names */
-    protected static final byte INS_GET_NAME = (byte)0x51;
+    protected static final byte INS_GET_NAMES = (byte)0x50;
     /* Secure Get PIN Remaining Tries */
     protected static final byte INS_PIN_TRIES = (byte)0x60;
     /* Secure PIN Verify */
@@ -131,6 +130,12 @@ public class CardSmartApplet extends Applet {
                     case INS_PIN_CHANGE:
                         this.changePIN(apdu);
                         break;
+                    case INS_STORE_SECRET:
+                        this.storeSecret(apdu);
+                        break;
+                    case INS_GET_NAMES:
+                        this.getNames(apdu);
+                        break;
                     default:
                         // The INS code is not supported by the dispatcher
                         ISOException.throwIt(RES_UNSUPPORTED_INS);
@@ -146,6 +151,15 @@ public class CardSmartApplet extends Applet {
             ISOException.throwIt(RES_ERR_GENERAL);
         }
     }
+
+    private void setUserAuthenticated(boolean isAuthenticated) {
+        this.isUserAuthenticated[0] = isAuthenticated;
+    }
+
+    private boolean getUserAuthenticated() {
+        return this.isUserAuthenticated[0];
+    }
+
 
     void getPINTries(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
@@ -166,7 +180,11 @@ public class CardSmartApplet extends Applet {
         if(!this.pin.check(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN)) {
             byte tries = this.pin.getTriesRemaining();
             if (tries == 0) {
-                this.resetSecretData();
+                try {
+                    this.resetSecretData();
+                } catch (StorageException e) {
+                    ISOException.throwIt(RES_ERR_GENERAL);
+                }
             }
             this.setUserAuthenticated(false);
             ISOException.throwIt(RES_ERR_NOT_LOGGED);
@@ -190,22 +208,55 @@ public class CardSmartApplet extends Applet {
         pin.update(apduBuffer, ISO7816.OFFSET_CDATA, (byte) dataLength);
     }
 
-    private void setUserAuthenticated(boolean isAuthenticated) {
-        this.isUserAuthenticated[0] = isAuthenticated;
+    void storeSecret(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
+
+        /* Check whether user is authenticated */
+        if (!this.getUserAuthenticated()) {
+            ISOException.throwIt(RES_ERR_NOT_LOGGED);
+        }
+        /* Create record in filesystem */
+        try {
+            byte nameLength = apduBuffer[ISO7816.OFFSET_CDATA];
+            short nameOffset = 1 + ISO7816.OFFSET_CDATA;
+            byte secretLength = apduBuffer[ISO7816.OFFSET_CDATA + 1 + nameLength];
+            short secretOffset = (short) (1 + ISO7816.OFFSET_CDATA + 1 + nameLength);
+            fileSystem.createRecord(apduBuffer, nameLength, nameOffset, secretLength, secretOffset);
+        } catch (StorageException e) {
+            ISOException.throwIt(RES_ERR_STORAGE_FULL);
+        } catch (InvalidArgumentException e) {
+            ISOException.throwIt(RES_ERR_SECRET_POLICY);
+        }
     }
 
-    private boolean getUserAuthenticated() {
-        return this.isUserAuthenticated[0];
+    void getNames(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
+
+        /* User does not have to be authenticated */
+        short namesLength = 0;
+        try {
+            /* Get all names into the temporary buffer */
+            namesLength = fileSystem.getAllNames(tempArray);
+            /* Copy result into response buffer*/
+            Util.arrayCopyNonAtomic(tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA,namesLength);
+        } catch (StorageException e) {
+            ISOException.throwIt(RES_ERR_STORAGE_FULL);
+        } catch (InvalidArgumentException e) {
+            ISOException.throwIt(RES_ERR_SECRET_POLICY);
+        }
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, namesLength);
     }
 
-    private void resetSecretData() {
+    private void resetSecretData() throws StorageException {
         //Util.arrayFillNonAtomic(tempArray, (short) 0, (short) TEMP_ARRAY_LEN, (byte) 0);
         eraseSecretData();
         this.pin.reset();
         this.pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
     }
 
-    private void eraseSecretData() {
-        // TODO
+    private void eraseSecretData() throws StorageException {
+        fileSystem.eraseData();
     }
 }
