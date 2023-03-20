@@ -181,26 +181,14 @@ for (short i = 0; i < myObjects.length; i++) {
 | `0x6C00` |            | unsupported CLA                                       |
 | `0x6C01` |            | unsupported INS                                       |
 
-### Secure Get Names Length
+
+#### Secure Get Names
 | APDU | Values  |
-| ---- | ------- |
+| ---- |---------|
 | INS  | `0x50`  |
 | OP   | `0x00`  |
 | lc   | `0x00`  |
 | DATA | ignored |
-
-| RES      | Data field | Info  |
-| -------- | ---------- | ----- |
-| `0x9000` |            |       |
-| `0x6B00` |            | error |
-
-#### Secure Get Names
-| APDU | Values                                                                                        |
-| ---- | --------------------------------------------------------------------------------------------- |
-| INS  | `0x51`                                                                                        |
-| OP   | `0x0Y`, where `Y` is the number of expected chunk order of the wanted chunk (starting from 0) |
-| lc   | `0x00`                                                                                        |
-| DATA | ignored                                                                                       |
 
 | RES      | Data field | Info  |
 | -------- | ---------- | ----- |
