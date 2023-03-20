@@ -165,6 +165,6 @@ public class Record {
      * @return 0 if empty, 1 otherwise
      * */
     public byte isEmpty() {
-        return (byte) (nameLength > 0 ? 1 : 0);
+        return (byte) (nameLength > 0 ? 0 : 1);
     }
 }
