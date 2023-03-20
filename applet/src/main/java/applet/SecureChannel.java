@@ -61,11 +61,12 @@ public class SecureChannel {
      * Initializes the SecureChannel instance with the pairing secret.
      *
      * @param newPairingSecret the pairing secret
+     * @param offset start of the pairing secret in the newPairingSecret buffer
      * @apiNote taken from status-keycard/SecureChannel.java
      */
     public void initSecureChannel(byte[] newPairingSecret, short offset) {
         // set new pairing secret after init command in the applet
-        Util.arrayCopy(newPairingSecret, offset, pairingSecret, (short) 0, PAIRING_SECRET_LENGTH);
+        Util.arrayCopy(newPairingSecret, (short) 0, pairingSecret, offset, PAIRING_SECRET_LENGTH);
         // update keys
         ecKeypair.genKeyPair();
     }
@@ -99,7 +100,7 @@ public class SecureChannel {
     }
 
     /**
-     * Open secure channel and generate AES card' keys
+     * Open secure channel and generate AES card's keys
      * @param apdu DATA: tool's public key, Lc: length of public key
      * @apiNote taken from status-keycard/SecureChannel.java
      */
