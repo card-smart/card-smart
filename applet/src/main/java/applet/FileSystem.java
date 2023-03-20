@@ -53,7 +53,7 @@ public class FileSystem {
     private byte getIndexOfFirstEmptyRecord() {
         byte index;
         for (index = 0; index < RECORDS_MAX_NUMBER; index++) {
-            if (records[index].isEmpty() == 0) {
+            if (records[index].isEmpty() == 1) {
                 return index;
             }
         }
@@ -65,16 +65,17 @@ public class FileSystem {
      *
      * @param name    A byte[] containing the name.
      * @param nameLength The length of the name.
+     * @param nameOffset offset where name starts
      * @throw InvalidArgumentException   When name is Null.
      * @throw StorageException When name is empty ("") and length is not 0.
      */
-    private byte getIndexByName(byte[] name, byte nameLength) throws InvalidArgumentException, StorageException {
+    private byte getIndexByName(byte[] name, byte nameLength, short nameOffset) throws InvalidArgumentException, StorageException {
         for (byte index = 0; index < RECORDS_MAX_NUMBER; index++) {
-            if (records[index].isEmpty() == 0)
+            if (records[index].isEmpty() == 1)
                 continue;
             byte len = records[index].getName(tempArray);
             if (len == nameLength
-                    && arrayCompare(name, (short) 0, tempArray, (short) 0, nameLength) == 0) {
+                    && Util.arrayCompare(name, nameOffset, tempArray, (short) 0, nameLength) == 0) {
                 return index;
             }
         }
@@ -112,18 +113,19 @@ public class FileSystem {
     /**
      * Delete record with given name if it exists
      *
-     * @param name    A byte[] containing the name.
+     * @param buffer    A byte[] containing the name.
      * @param nameLength The length of the name.
+     * @param nameOffset offset where name starts
      * @throw InvalidArgumentException
      * @throw StorageException
      */
-    public void deleteRecord(byte[] name, byte nameLength) throws InvalidArgumentException, StorageException {
+    public void deleteRecord(byte[] buffer, byte nameLength, short nameOffset) throws InvalidArgumentException, StorageException {
         if (nameLength < 0) {
             throw new InvalidArgumentException("Invalid length of name");
         }
 
         /* Find index of given record */
-        byte index = getIndexByName(name, nameLength);
+        byte index = getIndexByName(buffer, nameLength, nameOffset);
         if (index < 0) {
             throw new StorageException("No record with given name exists");
         }
@@ -136,17 +138,18 @@ public class FileSystem {
      *
      * @param name    A byte[] containing the name.
      * @param nameLength The length of the name.
+     * @param nameOffset offset where name starts
      * @param outputBuffer A byte[] output buffer where the secret is stored.
      * @throw InvalidArgumentException
      * @throw StorageException
      */
-    public short getSecretByName(byte[] name, byte nameLength, byte[] outputBuffer) throws InvalidArgumentException, ConsistencyException, StorageException {
+    public short getSecretByName(byte[] name, byte nameLength, short nameOffset, byte[] outputBuffer) throws InvalidArgumentException, ConsistencyException, StorageException {
         if (name == null || nameLength < 0
                 || outputBuffer == null || outputBuffer.length == 0) {
             throw new InvalidArgumentException("Invalid arguments when getting secret by name");
         }
 
-        byte index = getIndexByName(name, nameLength);
+        byte index = getIndexByName(name, nameLength, nameOffset);
         if (index < 0) {
             return 0;
         }
@@ -168,7 +171,7 @@ public class FileSystem {
         }
         short offset = 0;
         for (int index = 0; index < RECORDS_MAX_NUMBER; index++) {
-            if (records[index].isEmpty() == 0)
+            if (records[index].isEmpty() == 1)
                 continue;
             byte len = records[index].getName(tempArray);
             outputBuffer[offset] = len;
