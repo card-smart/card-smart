@@ -180,4 +180,10 @@ public class FileSystem {
         }
         return offset;
     }
+
+    public void eraseData() throws StorageException {
+        for (int i = 0; i < RECORDS_MAX_NUMBER; i++) {
+            this.records[i].eraseRecord();
+        }
+    }
 }

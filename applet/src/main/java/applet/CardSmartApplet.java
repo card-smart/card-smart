@@ -166,7 +166,11 @@ public class CardSmartApplet extends Applet {
         if(!this.pin.check(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN)) {
             byte tries = this.pin.getTriesRemaining();
             if (tries == 0) {
-                this.resetSecretData();
+                try {
+                    this.resetSecretData();
+                } catch (StorageException e) {
+                    ISOException.throwIt(RES_ERR_GENERAL);
+                }
             }
             this.setUserAuthenticated(false);
             ISOException.throwIt(RES_ERR_NOT_LOGGED);
@@ -198,14 +202,14 @@ public class CardSmartApplet extends Applet {
         return this.isUserAuthenticated[0];
     }
 
-    private void resetSecretData() {
+    private void resetSecretData() throws StorageException {
         //Util.arrayFillNonAtomic(tempArray, (short) 0, (short) TEMP_ARRAY_LEN, (byte) 0);
         eraseSecretData();
         this.pin.reset();
         this.pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
     }
 
-    private void eraseSecretData() {
-        // TODO
+    private void eraseSecretData() throws StorageException {
+        fileSystem.eraseData();
     }
 }
