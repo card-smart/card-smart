@@ -74,7 +74,10 @@ public class CardSmartApplet extends Applet {
     /*
      * Other instances
      */
+
     FileSystem fileSystem = null;
+    SecureChannel secureChannel = null;
+
     private static final short TEMP_ARRAY_LEN = (short) 256;
     //private byte[] tempArray = null;
     private boolean[] isUserAuthenticated = null;
@@ -97,6 +100,9 @@ public class CardSmartApplet extends Applet {
 
         /* Initialize filesystem with empty records */
         this.fileSystem = new FileSystem();
+
+        /* Create instance of SecureChannel class */
+        secureChannel = new SecureChannel();
 
         register();
     }
@@ -178,14 +184,14 @@ public class CardSmartApplet extends Applet {
         }
 
         // 2. decrypt apduBuffer to obtain PIN and pairingSecret for secure channel
-        // secureChannel.initDecrypt(apduBuffer);
+        secureChannel.initDecrypt(apduBuffer);
 
         // 3. get PIN of decrypted apduBuffer
         // TODO: Check PIN policy
         pin.update(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN);
 
         // 4. set pairingSecret and update current card EC keypair
-        //secureChannel.initSecureChannel(apduBuffer, (short)(ISO7816.OFFSET_CDATA + PIN_MAX_LEN));
+        secureChannel.initSecureChannel(apduBuffer, (short)(ISO7816.OFFSET_CDATA + PIN_MAX_LEN));
     }
 
     private void setUserAuthenticated(boolean isAuthenticated) {

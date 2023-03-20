@@ -33,7 +33,7 @@ public class SecureChannel {
      * Initialize new secure channel instance, prepare algorithms and generate static card EC keypair
      */
     public SecureChannel() {
-        random = RandomData.getInstance(RandomData.ALG_TRNG);
+        random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_PLAIN, false);
         mac = Signature.getInstance(Signature.ALG_AES_MAC_128_NOPAD, false);
         sha512 = MessageDigest.getInstance(MessageDigest.ALG_SHA_512, false);
@@ -63,9 +63,9 @@ public class SecureChannel {
      * @param newPairingSecret the pairing secret
      * @apiNote taken from status-keycard/SecureChannel.java
      */
-    public void initSecureChannel(byte[] newPairingSecret) {
+    public void initSecureChannel(byte[] newPairingSecret, short offset) {
         // set new pairing secret after init command in the applet
-        Util.arrayCopy(newPairingSecret, (short) 0, pairingSecret, (short) 0, PAIRING_SECRET_LENGTH);
+        Util.arrayCopy(newPairingSecret, offset, pairingSecret, (short) 0, PAIRING_SECRET_LENGTH);
         // update keys
         ecKeypair.genKeyPair();
     }
@@ -119,7 +119,7 @@ public class SecureChannel {
         }
         // 2. generate random salt for tool
         // TODO: IV?
-        random.nextBytes(apduBuffer, (short) 0, PAIRING_SECRET_LENGTH);
+        random.generateData(apduBuffer, (short) 0, PAIRING_SECRET_LENGTH);
         // 3. generate hash from salt, pairing secret and derived secret
         sha512.update(secret, (short) 0, len);
         sha512.update(pairingSecret, (short) 0, PAIRING_SECRET_LENGTH);
