@@ -130,6 +130,28 @@ for (short i = 0; i < myObjects.length; i++) {
 | `0x9000` | EC public key |       |
 | `0x6B00` | none          | error |
 
+### Unsecure Card Init
+* setting initial PIN and pairingSecret for subsequent secure channel creation
+* when init is performed, if any data are set in applet, they are reset to default state
+* in this step, tool has to already have public key of the card
+* if applet is **not initialized, it can be used only in unsecure communication**
+  * **subsequent init erase all stored data**
+
+| APDU | Values                                              |
+| ---- |-----------------------------------------------------|
+| CLA  | `0xC0`                                              |
+| INS  | `0x41`                                              |
+| P0   | `0x00`                                              |
+| P1   | `0x00`                                              |
+| lc   | `0x7B` (65 + 16 + (10 + 32))                        |
+| DATA | EC public key (LV encoded) + IV + encrypted payload |
+| le   | ignored                                             |
+
+| RES      | Data field    | Info  |
+| -------- | ------------- | ----- |
+| `0x9000` | EC public key |       |
+| `0x6B00` | none          | error |
+
 ### Unsecure Open Secure Channel
 | APDU | Values                             |
 | ---- | ---------------------------------- |
