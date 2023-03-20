@@ -2,6 +2,7 @@ package applet;
 
 import javacard.framework.*;
 import javacard.security.*;
+import javacardx.crypto.Cipher;
 
 public class SecureChannel {
 
@@ -20,6 +21,7 @@ public class SecureChannel {
     private final KeyAgreement ecdh;
     private Signature mac;
     MessageDigest sha512;
+    Cipher aesCbc;
 
     private final AESKey encryptionKey;
     private final AESKey macKey;
@@ -35,6 +37,7 @@ public class SecureChannel {
         ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_PLAIN, false);
         mac = Signature.getInstance(Signature.ALG_AES_MAC_128_NOPAD, false);
         sha512 = MessageDigest.getInstance(MessageDigest.ALG_SHA_512, false);
+        aesCbc = Cipher.getInstance(Cipher.ALG_AES_CBC_ISO9797_M2,false);
 
         encryptionKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES_TRANSIENT_DESELECT, KeyBuilder.LENGTH_AES_256, false);
         macKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES_TRANSIENT_DESELECT, KeyBuilder.LENGTH_AES_256, false);
@@ -52,6 +55,47 @@ public class SecureChannel {
      */
     public ECPublicKey getCardPublicKey(){
         return (ECPublicKey)ecKeypair.getPublic();
+    }
+
+    /**
+     * Initializes the SecureChannel instance with the pairing secret.
+     *
+     * @param newPairingSecret the pairing secret
+     * @apiNote taken from status-keycard/SecureChannel.java
+     */
+    public void initSecureChannel(byte[] newPairingSecret) {
+        // set new pairing secret after init command in the applet
+        Util.arrayCopy(newPairingSecret, (short) 0, pairingSecret, (short) 0, PAIRING_SECRET_LENGTH);
+        // update keys
+        ecKeypair.genKeyPair();
+    }
+
+    /**
+     * Decrypts the content of the APDU by generating an AES key using EC-DH. Usable only with specific commands.
+     * @param apduBuffer the APDU buffer
+     * @apiNote taken from status-keycard/SecureChannel.java
+     */
+    public void initDecrypt(byte[] apduBuffer) {
+        // apdu payload = EC public key | IV [16 B] | encrypted(PIN | pairingSecret)
+        ecdh.init(ecKeypair.getPrivate());
+
+        short publicKeyOffset = (short)(ISO7816.OFFSET_CDATA + 1);
+        try {
+            // Use public key from apdu buffer to derive secret used for encryption of payload
+            ecdh.generateSecret(apduBuffer, publicKeyOffset, apduBuffer[ISO7816.OFFSET_CDATA], secret, (short) 0);
+        } catch(Exception e) {
+            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+            return;
+        }
+        // get IV from apduBuffer and prepare decryption
+        short ivOffset = (short)(publicKeyOffset + apduBuffer[ISO7816.OFFSET_CDATA]);
+        encryptionKey.setKey(secret, (short) 0);
+        aesCbc.init(encryptionKey, Cipher.MODE_DECRYPT, apduBuffer, ivOffset, AES_BLOCK_SIZE);
+
+        short payloadOffset = (short)(ivOffset + AES_BLOCK_SIZE);
+        apduBuffer[ISO7816.OFFSET_LC] = (byte) aesCbc.doFinal(apduBuffer, payloadOffset,
+                (short)((short)(apduBuffer[ISO7816.OFFSET_LC] & 0xff) - payloadOffset + ISO7816.OFFSET_CDATA),
+                apduBuffer, ISO7816.OFFSET_CDATA);
     }
 
     /**
