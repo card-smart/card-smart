@@ -131,6 +131,9 @@ public class CardSmartApplet extends Applet {
                     case INS_PIN_CHANGE:
                         this.changePIN(apdu);
                         break;
+                    case INS_STORE_SECRET:
+                        this.storeSecret(apdu);
+                        break;
                     default:
                         // The INS code is not supported by the dispatcher
                         ISOException.throwIt(RES_UNSUPPORTED_INS);
@@ -146,6 +149,15 @@ public class CardSmartApplet extends Applet {
             ISOException.throwIt(RES_ERR_GENERAL);
         }
     }
+
+    private void setUserAuthenticated(boolean isAuthenticated) {
+        this.isUserAuthenticated[0] = isAuthenticated;
+    }
+
+    private boolean getUserAuthenticated() {
+        return this.isUserAuthenticated[0];
+    }
+
 
     void getPINTries(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
@@ -194,12 +206,24 @@ public class CardSmartApplet extends Applet {
         pin.update(apduBuffer, ISO7816.OFFSET_CDATA, (byte) dataLength);
     }
 
-    private void setUserAuthenticated(boolean isAuthenticated) {
-        this.isUserAuthenticated[0] = isAuthenticated;
-    }
+    void storeSecret(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
 
-    private boolean getUserAuthenticated() {
-        return this.isUserAuthenticated[0];
+        /* Check whether user is authenticated */
+        if (!this.getUserAuthenticated()) {
+            ISOException.throwIt(RES_ERR_NOT_LOGGED);
+        }
+        /* Create record in filesystem */
+        try {
+            byte nameLength = apduBuffer[ISO7816.OFFSET_CDATA];
+            byte secretLength = apduBuffer[ISO7816.OFFSET_CDATA + 1 + nameLength];
+            fileSystem.createRecord(apduBuffer, nameLength, (short) 1, secretLength, (short) (2 + nameLength));
+        } catch (StorageException e) {
+            ISOException.throwIt(RES_ERR_STORAGE_FULL);
+        } catch (InvalidArgumentException e) {
+            ISOException.throwIt(RES_ERR_SECRET_POLICY);
+        }
     }
 
     private void resetSecretData() throws StorageException {
