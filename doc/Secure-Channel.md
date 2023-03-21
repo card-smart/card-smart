@@ -6,6 +6,7 @@
     * symmetric key used both by tool and applet
 * **MAC tags** - _data integrity, authentication of origin_
   * based on AES 128 with not padding
+  * _encrypt-then-MAC_ - mechanism
 
 ## Secure Channel Establishment
 ### **Tool** Secure Channel Initialization
@@ -46,3 +47,23 @@
    * hash = SHA512(derivedSecret | pairingSecret | salt)
    * encryptionKey = hash[0:32]
    * macKey = hash[32:64]
+=> both card 
+
+### APDU and responses on the **card**'s site
+#### Encryption of response
+* main (unencrypted) SW1 and SW2 are always `0x9000`
+* return codes are packed inside of the data part
+
+```
+0x90 | 0x00 | encrypted(data [max 238 B] | SW1 | SW2) [max 240 B] | MAC tag [16 B]
+```
+
+#### Decryption of APDU
+* TODO
+
+### APDU and responses on the **tool**'s site
+#### Encryption of response
+* TODO
+
+#### Decryption of APDU
+* TODO
