@@ -43,6 +43,10 @@
 * send secret name to card, which should be deleted
 * get information, that such data do not exist/cannot be deleted
 
+### 8. Secure Channel
+* encryption
+* MAC tags
+
 ## Files
 ### CardSmartApplet.java
 #### Static information
@@ -81,8 +85,9 @@ for (short i = 0; i < myObjects.length; i++) {
 * checksum to detect faults (`Checksum`)
 
 ### SecureChannel.java
-* generate random new key pair for secure communication
+* implementation of secure channel capabilities
 
+---
 
 ## APDU Specification
 * CLA = `0xC0`
@@ -92,12 +97,13 @@ for (short i = 0; i < myObjects.length; i++) {
       * APDU processed directly
   2. Secure = encrypt-than-MAC
       * sending with special APDU, which means _we are sending encrypted data, which are along with the command_
+      * encrypted data must be padded to 16B-blocks
   ```
   Unsecure APDU:
   CLA | INS | P1 | P2 | lc | data [max 255 B]
 
   Secure APDU:
-  CLA | INS | P1 | P2 | lc | encryted data [max 239 B] | MAC tag [16 B]
+  CLA | INS | P1 | P2 | lc | encryted data [max 234 B] | MAC tag [16 B]
 
   Inner encrypted data [max 239 B]:
   INS | OP | lc | data [max 236 B]
@@ -106,7 +112,7 @@ for (short i = 0; i < myObjects.length; i++) {
   SW1 | SW2 | data [max 256 B]
 
   Secure RES:
-  SW1 | SW2 | encrypted data [max 240 B] | MAC tag [16 B]
+  0x90 | 0x00 | encrypted(data [max 238] | SW1 | SW2) [max 240 B] | MAC tag [16 B]
   ```
 * **LV structure** (length-value)
   ```
@@ -114,7 +120,25 @@ for (short i = 0; i < myObjects.length; i++) {
   ```
   * by default, the `OP` in the inner APDU is only byte, it can be also used as `P1` while `P2 = 0x00`
 
-### Unsecure Get Card EC Public Key
+## Applet states
+### Uninitialized state
+* no pairing secret set
+* communication not via secure channel
+* trying to use initialized functionality should fail
+* when applet is initialized, all data are erased
+
+### Initialized state
+* pairing secret is set and thus also secure channel can be opened
+* it is not possible to perform critical operations without secure channel (instructions are _disabled_)
+
+## APDU
+### APDU for initialization of applet
+* not via secure channel
+* works both in initialized and uninitialized mode
+
+#### Unsecure Get Card EC Public Key
+* works by initialized and uninitialized state
+
 | APDU | Values  |
 | ---- | ------- |
 | CLA  | `0xC0`  |
@@ -130,12 +154,13 @@ for (short i = 0; i < myObjects.length; i++) {
 | `0x9000` | EC public key |       |
 | `0x6B00` | none          | error |
 
-### Unsecure Card Init
+#### Unsecure Card Init
 * setting initial PIN and pairingSecret for subsequent secure channel creation
 * when init is performed, if any data are set in applet, they are reset to default state
 * in this step, tool has to already have public key of the card
 * if applet is **not initialized, it can be used only in unsecure communication**
   * **subsequent init erase all stored data**
+* after this command, it is not possible to get applet back into uninitialized state
 
 | APDU | Values                                              |
 | ---- |-----------------------------------------------------|
@@ -152,7 +177,8 @@ for (short i = 0; i < myObjects.length; i++) {
 | `0x9000` | EC public key |       |
 | `0x6B00` | none          | error |
 
-### Unsecure Open Secure Channel
+#### Unsecure Open Secure Channel
+* works only in initialized mode
 | APDU | Values                             |
 | ---- | ---------------------------------- |
 | CLA  | `0xC0`                             |
@@ -166,7 +192,7 @@ for (short i = 0; i < myObjects.length; i++) {
 | -------- | ---------- | ------- |
 | `0x9000` |            | success |
 
-### Unsecure Send Message
+#### Unsecure Send (secure) Message
 | APDU | Values                                 |
 | ---- | -------------------------------------- |
 | CLA  | `0xC0`                                 |
@@ -176,7 +202,7 @@ for (short i = 0; i < myObjects.length; i++) {
 | lc   | length of the encrypted data + MAC tag |
 | DATA | encrypted data + MAC tag               |
 
-### Unsecure Close Secure Channel
+#### Unsecure Close Secure Channel
 | APDU | Values  |
 | ---- | ------- |
 | CLA  | `0xC0`  |
@@ -186,7 +212,7 @@ for (short i = 0; i < myObjects.length; i++) {
 | lc   | `0x00`  |
 | DATA | ignored |
 
-### Secure channel error codes
+#### Secure channel error codes
 | RES      | Data field | Info                                                  |
 |----------| ---------- |-------------------------------------------------------|
 | `0x9000` |            | success                                               |
@@ -203,6 +229,8 @@ for (short i = 0; i < myObjects.length; i++) {
 | `0x6C00` |            | unsupported CLA                                       |
 | `0x6C01` |            | unsupported INS                                       |
 
+### Simple APDU for applet functionality
+* now works without secure channel
 
 #### Secure Get Names
 | APDU | Values  |
@@ -382,3 +410,4 @@ close channel
 --> C0 30 00 00 00
 --< 90 00
 ```
+ 
