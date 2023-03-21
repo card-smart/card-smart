@@ -42,6 +42,7 @@ public class CardSmartApplet extends Applet {
     protected static final short RES_SUCCESS = (short)0x9000;
     protected static final short RES_ERR_DECRYPTION = (short)0x6A00;
     protected static final short RES_ERR_MAC = (short)0x6A01;
+    protected static final short RES_ERR_UNINITIALIZED = (short)0x6A01;
     protected static final short RES_ERR_GENERAL = (short)0x6B00;
     protected static final short RES_ERR_NOT_LOGGED = (short)0x6B01;
     protected static final short RES_ERR_RESET = (short)0x6B02;
@@ -169,10 +170,21 @@ public class CardSmartApplet extends Applet {
         }
     }
 
+    /**
+     * Returns true when applet is initialized
+     */
     private boolean getAppletInitialized() {
         return this.isAppletInitialized[0];
     }
 
+    /**
+     * Get public key of card
+     *
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
+     * @RESPONSE   ECC public key
+     * @apiNote works in both uninitialized and initialized state
+     */
     void getPublicKey(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
@@ -181,11 +193,20 @@ public class CardSmartApplet extends Applet {
         apdu.setOutgoingAndSend((short) 0, keyLength);
     }
 
+    /**
+     * Initialize applet
+     *
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = max 0x7B, DATA = EC public key (LV encoded) + IV + encrypted payload
+     * @RESPONSE   none
+     * @apiNote authentication not required
+     * @apiNote works in both uninitialized and initialized state
+     */
     void init(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
 
-        // 1. if applet is somehow initied, delete all data and reset PIN
+        // 1. if applet isinitialized already, first delete all data and reset PIN
         if (this.getAppletInitialized()) {
             try {
                 this.resetToDefault();
@@ -205,6 +226,10 @@ public class CardSmartApplet extends Applet {
         secureChannel.initSecureChannel(apduBuffer, (short) (ISO7816.OFFSET_CDATA + PIN_MAX_LEN));
     }
 
+    /**
+     * Set applet to authenticated state
+     * @param isAuthenticated value to be set
+     */
     private void setUserAuthenticated(boolean isAuthenticated) {
         this.isUserAuthenticated[0] = isAuthenticated;
     }
@@ -213,7 +238,15 @@ public class CardSmartApplet extends Applet {
         return this.isUserAuthenticated[0];
     }
 
-
+    /**
+     * Get remaining PIN tries
+     *
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = max 0x7B, DATA = EC public key (LV encoded) + IV + encrypted payload
+     * @RESPONSE   2 B (short) of remaining PIN tries
+     * @apiNote authentication not required
+     * @apiNote works in both uninitialized and initialized state
+     */
     void getPINTries(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         //short dataLength = apdu.setIncomingAndReceive();
@@ -225,6 +258,15 @@ public class CardSmartApplet extends Applet {
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, (short) 1);
     }
 
+    /**
+     * Verify given PIN and set card into authenticated state
+     *
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = max 0x7B, DATA = EC public key (LV encoded) + IV + encrypted payload
+     * @RESPONSE   none
+     * @apiNote authentication not required
+     * @apiNote works in both uninitialized and initialized state
+     */
     void verifyPIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
@@ -245,6 +287,15 @@ public class CardSmartApplet extends Applet {
         this.setUserAuthenticated(true);
     }
 
+    /**
+     * Change current PIN to the PIN in data
+     *
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = max 0x0A, DATA = EC public key (LV encoded) + IV + encrypted payload
+     * @RESPONSE   none
+     * @apiNote authentication required
+     * @apiNote works in both uninitialized and initialized state
+     */
     void changePIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
@@ -261,6 +312,15 @@ public class CardSmartApplet extends Applet {
         pin.update(apduBuffer, ISO7816.OFFSET_CDATA, (byte) dataLength);
     }
 
+    /**
+     * Store secret into card filesystem with given access name
+     *
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c, DATA = name length [1 B] | name [max 10 B] | secret length [1 B] | secret [max 64 B]
+     * @RESPONSE   none
+     * @apiNote authentication required
+     * @apiNote works in both uninitialized and initialized state
+     */
     void storeSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
@@ -283,6 +343,15 @@ public class CardSmartApplet extends Applet {
         }
     }
 
+    /**
+     * Get names of all secrets stored in the card
+     *
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
+     * @RESPONSE   LV values of names concatenated together
+     * @apiNote authentication not required
+     * @apiNote works in both uninitialized and initialized state
+     */
     void getNames(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
@@ -302,6 +371,10 @@ public class CardSmartApplet extends Applet {
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, namesLength);
     }
 
+    /**
+     * Reset data on card to default state
+     * It does not influence the initialization state itself
+     */
     private void resetToDefault() throws StorageException {
         //Util.arrayFillNonAtomic(tempArray, (short) 0, (short) TEMP_ARRAY_LEN, (byte) 0);
         eraseSecretData();
@@ -309,6 +382,9 @@ public class CardSmartApplet extends Applet {
         this.pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
     }
 
+    /**
+     * Erase data from filesystem
+     */
     private void eraseSecretData() throws StorageException {
         fileSystem.eraseData();
     }
