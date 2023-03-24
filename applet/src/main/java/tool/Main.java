@@ -1,5 +1,6 @@
 package tool;
 
+import main.Run;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
 
@@ -8,7 +9,10 @@ import java.util.Scanner;
 
 
 public class Main {
+    private static final Run run = new Run();
     public static void main(String[] args) throws ParseException {
+        run.main();
+
         CommandParser cmdParser = new CommandParser();
         boolean release = false;
         boolean simulator = true;
@@ -49,6 +53,11 @@ public class Main {
 
     private static void sendAPDU(CommandParser cmdParser, boolean simulator, String[] cmd) throws ParseException {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
+
+        run.getTries();
+        //run.login();
+        //run.changePIN();
+
     }
 
     private static void smartie(CommandParser cmdParser, boolean simulator) throws ParseException {

@@ -10,7 +10,7 @@ import javax.smartcardio.*;
 public class Run {
     static CardSimulator simulator;
 
-    public static void main(String[] args){
+    public void main(){
         // 1. create simulator
          simulator = new CardSimulator();
 
@@ -59,21 +59,21 @@ public class Run {
         System.out.println("DATA: " + bytesToHex(response.getData()));
     }
 
-    private static void getTries() {
+    public void getTries() {
         CommandAPDU commandAPDU = new CommandAPDU(0xC0, 0x60, 0x00, 0x00);
         ResponseAPDU response = simulator.transmitCommand(commandAPDU);
         printAPDU(commandAPDU);
         printResponse(response);
     }
 
-    private static void login(byte[] pin) {
+    public void login(byte[] pin) {
         CommandAPDU commandAPDU = new CommandAPDU(0xC0, 0x61, 0x00, 0x00, pin);
         ResponseAPDU response = simulator.transmitCommand(commandAPDU);
         printAPDU(commandAPDU);
         printResponse(response);
     }
 
-    private static void changePIN(byte[] pin) {
+    public void changePIN(byte[] pin) {
         CommandAPDU commandAPDU = new CommandAPDU(0xC0, 0x62, 0x00, 0x00, pin);
         ResponseAPDU response = simulator.transmitCommand(commandAPDU);
         printAPDU(commandAPDU);
