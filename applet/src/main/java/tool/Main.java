@@ -7,7 +7,6 @@ import org.apache.commons.cli.ParseException;
 import java.util.Objects;
 import java.util.Scanner;
 
-
 public class Main {
     private static final Run run = new Run();
     private static final CommandParser cmdParser = new CommandParser();
@@ -54,10 +53,11 @@ public class Main {
     private static void sendAPDU(String[] cmd) throws ParseException {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
 
-        run.getTries();
-        //run.login();
-        //run.changePIN();
-
+        if (simulator) {
+            run.getTries();
+            //run.login();
+            //run.changePIN();
+        }
     }
 
     private static void smartie() throws ParseException {
@@ -67,11 +67,7 @@ public class Main {
 
         while (!Objects.equals((line = scanner.nextLine()), "quit")) {
             String[] cmd = line.split(" ");
-            CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
-
-            // TODO fill Callback based on parsed data
-            // TODO send apdu
-
+            sendAPDU(cmd);
 
             System.out.print("smartie$ ");
         }
