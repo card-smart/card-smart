@@ -1,9 +1,11 @@
 package tool;
 
+import jdk.nashorn.internal.codegen.CompilerConstants;
 import main.Run;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
 
+import java.io.IOException;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -13,7 +15,7 @@ public class Main {
     private static final boolean release = false;
     private static final boolean simulator = true;
 
-    public static void main(String[] args) throws ParseException {
+    public static void main(String[] args) throws ParseException, IOException {
         run.main();
 
         /*
@@ -50,17 +52,30 @@ public class Main {
         smartie();
     }
 
-    private static void sendAPDU(String[] cmd) throws ParseException {
+    private static void sendAPDU(String[] cmd) throws ParseException, IOException {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
+        Callback cb = new Callback(cmd_parsed);
+
+        if (!cb.validateInput()) {
+            return;
+        }
 
         if (simulator) {
             run.getTries();
-            //run.login();
+
+            if (cb.loginNeeded) {
+                //run.login();
+            }
             //run.changePIN();
+
+            return;
+        }
+        if (cb.loginNeeded) {
+            //login();
         }
     }
 
-    private static void smartie() throws ParseException {
+    private static void smartie() throws ParseException, IOException {
         Scanner scanner = new Scanner(System.in);
         System.out.print("smartie$ ");
         String line;
