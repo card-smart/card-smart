@@ -64,9 +64,11 @@ public class Main {
             run.getTries();
 
             if (cb.loginNeeded) {
-                //run.login();
+                //run.login(cb);
             }
-            //run.changePIN();
+            if (cmd_parsed.hasOption('c')) {
+                //run.changePIN(cb);
+            }
 
             return;
         }
