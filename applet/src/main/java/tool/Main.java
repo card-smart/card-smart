@@ -10,16 +10,16 @@ import java.util.Scanner;
 
 public class Main {
     private static final Run run = new Run();
+    private static final CommandParser cmdParser = new CommandParser();
+    private static final boolean release = false;
+    private static final boolean simulator = true;
+
     public static void main(String[] args) throws ParseException {
         run.main();
 
-        CommandParser cmdParser = new CommandParser();
-        boolean release = false;
-        boolean simulator = true;
-
         /*
         This is for our testing - on simulator or on a real card - specified above,
-        simulator is the default
+        simulator is the default and only call, as the real card is not implemented yet
 
         You can use either sendAPDU() function where you can specify
         command line arguments in an array to avoid writing them each time:
@@ -36,8 +36,8 @@ public class Main {
             smartie$ quit
          */
         if (!release) {
-            sendAPDU(cmdParser, simulator, new String[]{"-v", "meno", "--pin", "pinik"});
-            //smartie(cmdParser, simulator);
+            sendAPDU(new String[]{"-v", "meno", "--pin", "pinik"});
+            //smartie();
             return;
         }
 
@@ -48,10 +48,10 @@ public class Main {
             return;
         }
 
-        smartie(cmdParser, false);
+        smartie();
     }
 
-    private static void sendAPDU(CommandParser cmdParser, boolean simulator, String[] cmd) throws ParseException {
+    private static void sendAPDU(String[] cmd) throws ParseException {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
 
         run.getTries();
@@ -60,7 +60,7 @@ public class Main {
 
     }
 
-    private static void smartie(CommandParser cmdParser, boolean simulator) throws ParseException {
+    private static void smartie() throws ParseException {
         Scanner scanner = new Scanner(System.in);
         System.out.print("smartie$ ");
         String line;
