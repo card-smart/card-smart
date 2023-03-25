@@ -17,7 +17,6 @@ public class SecureChannel {
     private static final short MAC_SIZE = (short) 16;
     private static final short PAIRING_SECRET_LENGTH = (short) 32;
     private static final short AES_KEY_LENGTH = (short) 32;
-    private static final short NONCE_LENGTH = (short) 32;
 
     /*
      * Algorithm implementations
@@ -50,10 +49,10 @@ public class SecureChannel {
         macKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES_TRANSIENT_DESELECT, KeyBuilder.LENGTH_AES_256, false);
 
         // temporary buffer used for storing generated/derived secrets
-        secret = JCSystem.makeTransientByteArray(NONCE_LENGTH, JCSystem.CLEAR_ON_DESELECT);
+        secret = JCSystem.makeTransientByteArray(PAIRING_SECRET_LENGTH, JCSystem.CLEAR_ON_DESELECT);
 
         // temporary buffer used for storing iv (= last MAC value seen from counterpart)
-        iv = JCSystem.makeTransientByteArray(NONCE_LENGTH, JCSystem.CLEAR_ON_DESELECT);
+        iv = JCSystem.makeTransientByteArray(AES_BLOCK_SIZE, JCSystem.CLEAR_ON_DESELECT);
 
         // card EC keypair
         this.ecKeypair = new KeyPair(KeyPair.ALG_EC_FP, KeyBuilder.LENGTH_EC_FP_256);
@@ -187,6 +186,7 @@ public class SecureChannel {
         // 3. verify MAC tag
         short macOffset = (short) (ISO7816.OFFSET_CDATA + (Lc - MAC_SIZE));
         if (!verifyMAC(apduBuffer, payloadLength, macOffset)) {
+            closeSecureChannel();
             ISOException.throwIt(RES_ERR_MAC);
         }
         try {
@@ -231,21 +231,30 @@ public class SecureChannel {
      * @apiNote taken from status-keycard/SecureChannel.java
      */
     public short encryptResponse(byte[] responseBuffer, short responseLength, short responseOffset, short SW) {
-        // TODO: Add SW after response into the buffer
+        // 1. Add SW after response into the buffer
+        Util.setShort(responseBuffer, (short) (responseOffset + responseLength), SW);
+        responseLength += 2;
         short encryptedLength = 0;
         try {
-            // 1. prepare AES
+            // 2. prepare AES
             aesCbc.init(encryptionKey, Cipher.MODE_ENCRYPT, secret, (short) 0, AES_BLOCK_SIZE);
-            // 2. encrypt the resBuffer in place
+            // 3. encrypt the resBuffer in place
             encryptedLength = aesCbc.doFinal(responseBuffer, responseOffset, responseLength, responseBuffer, responseOffset);
         } catch (Exception e) {
             ISOException.throwIt(RES_ERR_ENCRYPTION);
         }
-        // 3. compute MAC of the whole encrypted part
+        // 4. compute MAC of the whole encrypted part
         computeMAC(responseBuffer, encryptedLength, responseOffset);
-        // 4. store MAC tag as IV for next decryption of response
+        // 5. store MAC tag as IV for next decryption of response
         short macOffset = (short) (responseOffset + responseLength);
         Util.arrayCopyNonAtomic(responseBuffer, macOffset, iv, (short) 0, AES_BLOCK_SIZE);
         return (short) (encryptedLength + MAC_SIZE);
+    }
+
+    public void closeSecureChannel() {
+        encryptionKey.clearKey();
+        macKey.clearKey();
+        Util.arrayFillNonAtomic(secret, (short) 0, PAIRING_SECRET_LENGTH, (byte) 0);
+        Util.arrayFillNonAtomic(iv, (short) 0, AES_BLOCK_SIZE, (byte) 0);
     }
 }

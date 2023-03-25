@@ -146,6 +146,12 @@ public class CardSmartApplet extends Applet {
                     case INS_INIT:
                         this.init(apdu);
                         break;
+                    case INS_OPEN_SC:
+                        this.openSecureChannel(apdu);
+                        break;
+                    case INS_CLOSE_SC:
+                        this.closeSecureChannel(apdu);
+                        break;
                     case INS_PIN_TRIES:
                         this.unsecureGetPINTries(apdu);
                         break;
@@ -259,6 +265,45 @@ public class CardSmartApplet extends Applet {
 
         // 4. set pairingSecret and update current card EC keypair
         secureChannel.initSecureChannel(apduBuffer, (short) (ISO7816.OFFSET_CDATA + PIN_MAX_LEN));
+    }
+
+    /**
+     * Open secure channel for current communication
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = length of the tool's public key, DATA = EC public key
+     * @RESPONSE   salt [32 B] | IV [16] B
+     * @apiNote authentication not required
+     * @apiNote works in initialized state
+     */
+    void openSecureChannel(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
+
+        // 1. if applet is not initialized, throw error
+        if (!this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_UNINITIALIZED);
+        }
+
+        // 2. open secure channel
+        secureChannel.openSecureChannel(apdu);
+    }
+
+    /**
+     * Close secure channel for current communication
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
+     * @RESPONSE   salt [32 B] | IV [16] B
+     * @apiNote authentication not required
+     * @apiNote works in initialized state
+     */
+    void closeSecureChannel(APDU apdu) {
+        // 1. if applet is not initialized, throw error
+        if (!this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_UNINITIALIZED);
+        }
+
+        // 2. close secure channel
+        secureChannel.closeSecureChannel();
     }
 
     /**
