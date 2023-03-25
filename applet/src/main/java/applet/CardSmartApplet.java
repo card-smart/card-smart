@@ -11,38 +11,41 @@ public class CardSmartApplet extends Applet {
     protected static final byte CLA_CARDSMARTAPPLET = (byte)0xB0;
     /* Unsecure Get Card EC Public Key */
     protected static final byte INS_GET_PUBLIC_KEY = (byte)0x40;
+    /* Set applet into Initialized mode */
     protected static final byte INS_INIT = (byte)0x41;
     /* Unsecure Open Secure Channel */
     protected static final byte INS_OPEN_SC = (byte)0x41;
-    /* Unsecure Send Message */
-    protected static final byte INS_MESSAGE = (byte)0x42;
     /* Unsecure Close Secure Channel */
-    protected static final byte INS_CLOSE_SC = (byte)0x43;
-    /* Secure Get Names Length */
-    /* Secure Get Names */
+    protected static final byte INS_CLOSE_SC = (byte)0x42;
+    /* Unsecure applet operations */
     protected static final byte INS_GET_NAMES = (byte)0x50;
-    /* Secure Get PIN Remaining Tries */
     protected static final byte INS_PIN_TRIES = (byte)0x60;
-    /* Secure PIN Verify */
     protected static final byte INS_PIN_VERIFY = (byte)0x61;
-    /* Secure Change PIN */
     protected static final byte INS_PIN_CHANGE = (byte)0x62;
-    /* Secure Get Length of Secret */
-    protected static final byte INS_SECRET_LEN = (byte)0x70;
-    /* Secure Get Value of Secret */
     protected static final byte INS_GET_SECRET = (byte)0x71;
-    /* Secure Store Value of Secret */
     protected static final byte INS_STORE_SECRET = (byte)0x80;
-    /* Secure Delete Secret */
     protected static final byte INS_DELETE_SECRET = (byte)0x81;
+    /* Secure applet operations */
+    protected static final byte S_INS_GET_NAMES = (byte)0x30;
+    protected static final byte S_INS_PIN_TRIES = (byte)0x31;
+    protected static final byte S_INS_PIN_VERIFY = (byte)0x32;
+    protected static final byte S_INS_PIN_CHANGE = (byte)0x33;
+    protected static final byte S_INS_GET_SECRET = (byte)0x34;
+    protected static final byte S_INS_STORE_SECRET = (byte)0x35;
+    protected static final byte S_INS_DELETE_SECRET = (byte)0x36;
 
     /*
      * Response Codes
      */
     protected static final short RES_SUCCESS = (short)0x9000;
-    protected static final short RES_ERR_DECRYPTION = (short)0x6A00;
-    protected static final short RES_ERR_MAC = (short)0x6A01;
-    protected static final short RES_ERR_UNINITIALIZED = (short)0x6A01;
+    /* Secure channel */
+    protected static final short RES_ERR_SECURE_CHANNEL = (short)0x6A00;
+    protected static final short RES_ERR_DECRYPTION = (short)0x6A01;
+    protected static final short RES_ERR_MAC = (short)0x6A02;
+    protected static final short RES_ERR_UNINITIALIZED = (short)0x6A02;
+    protected static final short RES_ERR_ECDH = (short)0x6A03;
+    protected static final short RES_ERR_DECRYPT = (short)0x6A04;
+    /* Operations */
     protected static final short RES_ERR_GENERAL = (short)0x6B00;
     protected static final short RES_ERR_NOT_LOGGED = (short)0x6B01;
     protected static final short RES_ERR_RESET = (short)0x6B02;
@@ -51,6 +54,8 @@ public class CardSmartApplet extends Applet {
     protected static final short RES_ERR_NAME_POLICY = (short)0x6B05;
     protected static final short RES_ERR_SECRET_POLICY = (short)0x6B06;
     protected static final short RES_ERR_NO_DATA = (short)0x6B07;
+    protected static final short RES_ERR_INPUT_DATA = (short)0x6B08;
+    /* Unsupported instructions */
     protected static final short RES_UNSUPPORTED_CLA = (short)0x6C00;
     protected static final short RES_UNSUPPORTED_INS = (short)0x6C01;
 
@@ -189,6 +194,7 @@ public class CardSmartApplet extends Applet {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
 
+        // some key should be always generated
         short keyLength = secureChannel.getCardPublicKey(apduBuffer, ISO7816.OFFSET_CDATA);
         apdu.setOutgoingAndSend((short) 0, keyLength);
     }
@@ -206,11 +212,15 @@ public class CardSmartApplet extends Applet {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
 
-        // 1. if applet isinitialized already, first delete all data and reset PIN
+        // 1. if applet is initialized already and PIN was verified, first delete all data and reset PIN
         if (this.getAppletInitialized()) {
-            try {
-                this.resetToDefault();
-            } catch (StorageException e) {
+            if (this.getUserAuthenticated()) {
+                try {
+                    this.resetToDefault();
+                } catch (StorageException e) {
+                    ISOException.throwIt(RES_ERR_GENERAL);
+                }
+            } else {
                 ISOException.throwIt(RES_ERR_GENERAL);
             }
         }
@@ -233,6 +243,10 @@ public class CardSmartApplet extends Applet {
     private void setUserAuthenticated(boolean isAuthenticated) {
         this.isUserAuthenticated[0] = isAuthenticated;
     }
+
+    /**
+     * Get authentication state of applet
+     */
 
     private boolean getUserAuthenticated() {
         return this.isUserAuthenticated[0];
