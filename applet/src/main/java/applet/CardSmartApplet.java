@@ -42,7 +42,9 @@ public class CardSmartApplet extends Applet {
     protected static final short RES_ERR_SECURE_CHANNEL = (short)0x6A00;
     protected static final short RES_ERR_DECRYPTION = (short)0x6A01;
     protected static final short RES_ERR_MAC = (short)0x6A02;
-    protected static final short RES_ERR_UNINITIALIZED = (short)0x6A02;
+    protected static final short RES_ERR_UNINITIALIZED = (short)0x6A03;
+    protected static final short RES_ERR_ENCRYPTION = (short)0x6A04;
+    protected static final short RES_ERR_DATA_LENGTH = (short)0x6A04;
     protected static final short RES_ERR_ECDH = (short)0x6A03;
     protected static final short RES_ERR_DECRYPT = (short)0x6A04;
     /* Operations */
@@ -50,7 +52,7 @@ public class CardSmartApplet extends Applet {
     protected static final short RES_ERR_NOT_LOGGED = (short)0x6B01;
     protected static final short RES_ERR_RESET = (short)0x6B02;
     protected static final short RES_ERR_PIN_POLICY = (short)0x6B03;
-    protected static final short RES_ERR_STORAGE_FULL = (short)0x6B04;
+    protected static final short RES_ERR_STORAGE = (short)0x6B04;
     protected static final short RES_ERR_NAME_POLICY = (short)0x6B05;
     protected static final short RES_ERR_SECRET_POLICY = (short)0x6B06;
     protected static final short RES_ERR_NO_DATA = (short)0x6B07;
@@ -145,7 +147,10 @@ public class CardSmartApplet extends Applet {
                         this.init(apdu);
                         break;
                     case INS_PIN_TRIES:
-                        this.getPINTries(apdu);
+                        this.unsecureGetPINTries(apdu);
+                        break;
+                    case S_INS_PIN_TRIES:
+                        this.secureGetPINTries(apdu);
                         break;
                     case INS_PIN_VERIFY:
                         this.verifyPIN(apdu);
@@ -184,7 +189,6 @@ public class CardSmartApplet extends Applet {
 
     /**
      * Get public key of card
-     *
      * @param apdu apdu command
      * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
      * @RESPONSE   ECC public key
@@ -201,7 +205,6 @@ public class CardSmartApplet extends Applet {
 
     /**
      * Initialize applet
-     *
      * @param apdu apdu command
      * @APDU       P1 = 0, P2 = 0, L_c = max 0x7B, DATA = EC public key (LV encoded) + IV + encrypted payload
      * @RESPONSE   none
@@ -253,23 +256,43 @@ public class CardSmartApplet extends Applet {
     }
 
     /**
-     * Get remaining PIN tries
-     *
-     * @param apdu apdu command
-     * @APDU       P1 = 0, P2 = 0, L_c = max 0x7B, DATA = EC public key (LV encoded) + IV + encrypted payload
-     * @RESPONSE   2 B (short) of remaining PIN tries
-     * @apiNote authentication not required
+     * Copy remaining PIN tries into response buffer
+     * @param responseBuffer buffer for response
      * @apiNote works in both uninitialized and initialized state
      */
-    void getPINTries(APDU apdu) {
-        byte[] apduBuffer = apdu.getBuffer();
-        //short dataLength = apdu.setIncomingAndReceive();
-
+    private void getPINTries(byte[] responseBuffer) {
         byte tries = pin.getTriesRemaining();
         this.fileSystem.tempArray[0] = tries;
-        Util.arrayCopyNonAtomic(this.fileSystem.tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA, (short) 1);
+        Util.arrayCopyNonAtomic(this.fileSystem.tempArray, (short) 0, responseBuffer, ISO7816.OFFSET_CDATA, (short) 1);
 
+    }
+
+    /**
+     * Unsecure get and send remaining PIN tries
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0
+     * @RESPONSE   1 B (short) of remaining PIN tries
+     * @apiNote authentication not required
+     */
+    void unsecureGetPINTries(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        getPINTries(apduBuffer);
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, (short) 1);
+    }
+
+    /**
+     * Secure get and send remaining PIN tries
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0
+     * @RESPONSE   encrypted(remaining tries [1 B]) [16 B] | MAC [16 B]
+     * @apiNote authentication not required
+     */
+    void secureGetPINTries(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        secureChannel.decryptAPDU(apduBuffer);
+        getPINTries(apduBuffer);
+        short length = secureChannel.encryptResponse(apduBuffer, (short) 1, ISO7816.OFFSET_CDATA, RES_SUCCESS);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, length);
     }
 
     /**
@@ -319,6 +342,7 @@ public class CardSmartApplet extends Applet {
             ISOException.throwIt(RES_ERR_NOT_LOGGED);
         }
         /* Check that PIN has correct length = maximal length */
+        // TODO: Add better check for PIN policy
         if (dataLength != PIN_MAX_LEN) {
             ISOException.throwIt(RES_ERR_PIN_POLICY);
         }
@@ -351,7 +375,7 @@ public class CardSmartApplet extends Applet {
             short secretOffset = (short) (1 + ISO7816.OFFSET_CDATA + 1 + nameLength);
             fileSystem.createRecord(apduBuffer, nameLength, nameOffset, secretLength, secretOffset);
         } catch (StorageException e) {
-            ISOException.throwIt(RES_ERR_STORAGE_FULL);
+            ISOException.throwIt(RES_ERR_STORAGE);
         } catch (InvalidArgumentException e) {
             ISOException.throwIt(RES_ERR_SECRET_POLICY);
         }
@@ -378,7 +402,7 @@ public class CardSmartApplet extends Applet {
             /* Copy result into response buffer*/
             Util.arrayCopyNonAtomic(fileSystem.tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA,namesLength);
         } catch (StorageException e) {
-            ISOException.throwIt(RES_ERR_STORAGE_FULL);
+            ISOException.throwIt(RES_ERR_STORAGE);
         } catch (InvalidArgumentException e) {
             ISOException.throwIt(RES_ERR_SECRET_POLICY);
         }
@@ -394,6 +418,7 @@ public class CardSmartApplet extends Applet {
         eraseSecretData();
         this.pin.reset();
         this.pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
+        // TODO: When applet is initialized, set back into uninitialized state
     }
 
     /**
