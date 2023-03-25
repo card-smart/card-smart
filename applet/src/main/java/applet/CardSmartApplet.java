@@ -176,8 +176,17 @@ public class CardSmartApplet extends Applet {
                     case S_INS_GET_NAMES:
                         this.secureGetNames(apdu);
                         break;
+                    case INS_GET_SECRET:
+                        this.unsecureGetSecret(apdu);
+                        break;
+                    case S_INS_GET_SECRET:
+                        this.secureGetSecret(apdu);
+                        break;
                     case INS_DELETE_SECRET:
                         this.unsecureDeleteSecret(apdu);
+                        break;
+                    case S_INS_DELETE_SECRET:
+                        this.secureDeleteSecret(apdu);
                         break;
                     default:
                         // The INS code is not supported by the dispatcher
@@ -575,6 +584,36 @@ public class CardSmartApplet extends Applet {
         secureChannel.decryptAPDU(apduBuffer);
         short SW = deleteSecret(apduBuffer);
         secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+    }
+
+    /**
+     * Unsecure get secret of given name
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = name length, DATA = name
+     * @RESPONSE   secret value
+     * @apiNote authentication required
+     */
+    void unsecureGetSecret(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        // TODO
+//        short SW = getSecret(apduBuffer);
+//        if (SW != RES_SUCCESS)
+//            ISOException.throwIt(SW);
+    }
+
+    /**
+     * Secure get secret of given name
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = name length, DATA = name
+     * @RESPONSE   none
+     * @apiNote authentication required
+     */
+    void secureGetSecret(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        // TODO
+        secureChannel.decryptAPDU(apduBuffer);
+//        short SW = getSecret(apduBuffer);
+//        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
     }
 
     /**
