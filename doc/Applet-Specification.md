@@ -136,25 +136,25 @@ for (short i = 0; i < myObjects.length; i++) {
 * not via secure channel
 * works both in initialized and uninitialized mode
 
-#### Unsecure Get Card EC Public Key
+#### Get Card EC Public Key
 * works by initialized and uninitialized state
 
 | APDU | Values  |
-| ---- | ------- |
+|------|---------|
 | CLA  | `0xC0`  |
 | INS  | `0x40`  |
-| P0   | `0x00`  |
 | P1   | `0x00`  |
-| lc   | `0x00`  |
+| P2   | `0x00`  |
+| lc   | ignored |
 | DATA | ignored |
 | le   | ignored |
 
-| RES      | Data field    | Info  |
-| -------- | ------------- | ----- |
-| `0x9000` | EC public key |       |
-| `0x6B00` | none          | error |
+| RES        | Data field      | Info            |
+|------------|-----------------|-----------------|
+| `0x9000`   | EC public key   |                 |
+| `0x6B00`   | none            | undefined error |
 
-#### Unsecure Card Init
+#### Card Init
 * setting initial PIN and pairingSecret for subsequent secure channel creation
 * when init is performed, if any data are set in applet, they are reset to default state
 * in this step, tool has to already have public key of the card
@@ -163,7 +163,7 @@ for (short i = 0; i < myObjects.length; i++) {
 * after this command, it is not possible to get applet back into uninitialized state
 
 | APDU | Values                                              |
-| ---- |-----------------------------------------------------|
+|------|-----------------------------------------------------|
 | CLA  | `0xC0`                                              |
 | INS  | `0x41`                                              |
 | P0   | `0x00`                                              |
@@ -172,12 +172,16 @@ for (short i = 0; i < myObjects.length; i++) {
 | DATA | EC public key (LV encoded) + IV + encrypted payload |
 | le   | ignored                                             |
 
-| RES      | Data field    | Info  |
-| -------- | ------------- | ----- |
-| `0x9000` | EC public key |       |
-| `0x6B00` | none          | error |
+| RES      | Data field     | Info                                                                        |
+|----------|----------------|-----------------------------------------------------------------------------|
+| `0x9000` | EC public key  |                                                                             |
+| `0x6B00` | none           | error                                                                       |
+| `0x6B01` | none           | when trying to initialize already initialized applet without authentication |
+| `0x6B03` | none           | PIN policy not satisfied                                                    |
+| `0x6A03` | none           | ECDH failed                                                                 |
+| `0x6A04` | none           | Decryption failed                                                           |
 
-#### Unsecure Open Secure Channel
+#### Open Secure Channel
 * works only in initialized mode
 | APDU | Values                             |
 | ---- | ---------------------------------- |
@@ -188,70 +192,67 @@ for (short i = 0; i < myObjects.length; i++) {
 | lc   | length of app public key and nonce |
 | DATA | app public key and nonce           |
 
-| RES      | Data field | Info    |
-| -------- | ---------- | ------- |
-| `0x9000` |            | success |
+| RES       | Data field  | Info     |
+|-----------|-------------|----------|
+| `0x9000`  |             | success  |
 
-#### Unsecure Send (secure) Message
-| APDU | Values                                 |
-| ---- | -------------------------------------- |
-| CLA  | `0xC0`                                 |
-| INS  | `0x42`                                 |
-| P0   | `0x00`                                 |
-| P1   | `0x00`                                 |
-| lc   | length of the encrypted data + MAC tag |
-| DATA | encrypted data + MAC tag               |
-
-#### Unsecure Close Secure Channel
-| APDU | Values  |
-| ---- | ------- |
-| CLA  | `0xC0`  |
-| INS  | `0x43`  |
-| P0   | `0x00`  |
-| P1   | `0x00`  |
-| lc   | `0x00`  |
-| DATA | ignored |
+#### Close Secure Channel
+| APDU  | Values   |
+|-------|----------|
+| CLA   | `0xC0`   |
+| INS   | `0x43`   |
+| P0    | `0x00`   |
+| P1    | `0x00`   |
+| lc    | `0x00`   |
+| DATA  | ignored  |
 
 #### Secure channel error codes
-| RES      | Data field | Info                                                  |
-|----------| ---------- |-------------------------------------------------------|
-| `0x9000` |            | success                                               |
-| `0x6A00` |            | decryption error                                      |
-| `0x6A01` |            | MAC error                                             |
-| `0x6B00` |            | error                                                 |
-| `0x6B01` |            | not logged in                                         |
-| `0x6B02` |            | out of tries, secret data deleted, PIN set to default |
-| `0x6B03` |            | PIN policy not satisfied                              |
-| `0x6B04` |            | storage full                                          |
-| `0x6B05` |            | name policy not satisfied                             |
-| `0x6B06` |            | secret policy not satisfied                           |
-| `0x6B07` |            | no such data                                          |
-| `0x6C00` |            | unsupported CLA                                       |
-| `0x6C01` |            | unsupported INS                                       |
+| RES       | Data field | Info                                                  |
+|-----------|------------|-------------------------------------------------------|
+| `0x9000`  |            | success                                               |
+| `0x6A00`  |            | decryption error                                      |
+| `0x6A01`  |            | MAC error                                             |
+| `0x6B00`  |            | error                                                 |
+| `0x6B01`  |            | not logged in                                         |
+| `0x6B02`  |            | out of tries, secret data deleted, PIN set to default |
+| `0x6B03`  |            | PIN policy not satisfied                              |
+| `0x6B04`  |            | storage full                                          |
+| `0x6B05`  |            | name policy not satisfied                             |
+| `0x6B06`  |            | secret policy not satisfied                           |
+| `0x6B07`  |            | no such data                                          |
+| `0x6C00`  |            | unsupported CLA                                       |
+| `0x6C01`  |            | unsupported INS                                       |
 
-### Simple APDU for applet functionality
-* now works without secure channel
+### APDU for applet functionality
+* `INS` denotes instruction code for unsecure channel
+  * using `S_INS` when applet is uninitialized returns response `TODO`
+* `S_INS` denotes instruction code fo secure channel
+  * using `INS` when applet is initialized returns response `TODO`
 
-#### Secure Get Names
-| APDU | Values  |
-| ---- |---------|
-| INS  | `0x50`  |
-| OP   | `0x00`  |
-| lc   | `0x00`  |
-| DATA | ignored |
+####  Get Names
+| APDU  | Values  |
+|-------|---------|
+| INS   | `0x50`  |
+| S_INS | `0x30`  |
+| P1    | `0x00`  |
+| P2    | `0x00`  |
+| lc    | `0x00`  |
+| DATA  | ignored |
 
 | RES      | Data field | Info  |
-| -------- | ---------- | ----- |
+|----------|------------|-------|
 | `0x9000` |            |       |
 | `0x6B00` |            | error |
 
 ### Secure Get PIN Remaining Tries
-| APDU | Values  |
-| ---- | ------- |
-| INS  | `0x60`  |
-| OP   | `0x00`  |
-| lc   | `0x00`  |
-| DATA | ignored |
+| APDU  | Values  |
+|-------|---------|
+| INS   | `0x60`  |
+| S_INS | `0x31`  |
+| P1    | `0x00`  |
+| P2    | `0x00`  ||
+| lc    | `0x00`  |
+| DATA  | ignored |
 
 | RES      | Data field            | Info  |
 | -------- | --------------------- | ----- |
@@ -259,70 +260,64 @@ for (short i = 0; i < myObjects.length; i++) {
 | `0x6B00` |                       | error |
 
 ### Secure PIN Verify
-| APDU | Values               |
-| ---- | -------------------- |
-| INS  | `0x61`               |
-| OP   | `0x00`               |
-| lc   | `0x10`               |
-| DATA | PIN [padded to 16 B] |
+| APDU  | Values               |
+|-------|----------------------|
+| INS   | `0x61`               |
+| S_INS | `0x32`               |
+| P1    | `0x00`               |
+| P2    | `0x00`               |
+| lc    | `0x10`               |
+| DATA  | PIN [padded to 16 B] |
 
 | RES      | Data field | Info                                                  |
-|----------| ---------- |-------------------------------------------------------|
+|----------|------------|-------------------------------------------------------|
 | `0x9000` |            | success                                               |
 | `0x6B00` |            | error                                                 |
 | `0x6B01` |            | not logged in                                         |
 | `0x6B02` |            | out of tries, secret data deleted, PIN set to default |
 
 ### Secure Change PIN
-| APDU | Values                   |
-| ---- | ------------------------ |
-| INS  | `0x62`                   |
-| OP   | `0x00`                   |
-| lc   | `0x10`                   |
-| DATA | new pin [padded to 16 B] |
+| APDU   | Values                   |
+|--------|--------------------------|
+| INS    | `0x62`                   |
+| S_INS  | `0x33`                   |
+| P1     | `0x00`                   |
+| P2     | `0x00`                   |
+| lc     | `0x10`                   |
+| DATA   | new pin [padded to 16 B] |
 
 | RES      | Data field | Info                     |
-|----------| ---------- | ------------------------ |
+|----------|------------| ------------------------ |
 | `0x9000` |            | success                  |
 | `0x6B00` |            | error                    |
 | `0x6B03` |            | PIN policy not satisfied |
 
-### Secure Get Length of Secret
-| APDU | Values                           |
-| ---- |----------------------------------|
-| INS  | `0x70`                           |
-| OP   | `0x00`                           |
-| lc   | `0xYY` length of the wanted name |
-| DATA | name                             |
-
-| RES      | Data field                 | Info    |
-| -------- | -------------------------- | ------- |
-| `0x9000` | length of the secret [2 B] | success |
-| `0x6B00` |                            | error   |
-
 ### Secure Get Value of Secret
-| APDU | Values                                             |
-| ---- | -------------------------------------------------- |
-| INS  | `0x71`                                             |
-| OP   | `0x0A` order of the wanted chunk (starting from 0) |
-| lc   | `0xBB` length of the wanted name                   |
-| DATA | name                                               |
+| APDU  | Values                           |
+|-------|----------------------------------|
+| INS   | `0x71`                           |
+| S_INS | `0x34`                           |
+| P1    | `0x00`                           |
+| P2    | `0x00`                           |
+| lc    | `0xBB` length of the wanted name |
+| DATA  | name                             |
 
-| RES      | Data field  | Info    |
-| -------- | ----------- | ------- |
-| `0x9000` | secret data | success |
-| `0x6B00` |             | error   |
+| RES        | Data field  | Info     |
+|------------|-------------|----------|
+| `0x9000`   | secret data | success  |
+| `0x6B00`   |             | error    |
 
 ### Secure Store Value of Secret
-| APDU | Values                                                                        |
-|------|-------------------------------------------------------------------------------|
-| INS  | `0x80`                                                                        |
-| OP   | `0x00`                                                                        |
-| lc   | `0xBB` length of name + secret data                                           |
-| DATA | name length [1 B] \ name [max 10 B] \ secret length [1 B] \ secret [max 64 B] |
+| APDU  | Values                                                                        |
+|-------|-------------------------------------------------------------------------------|
+| INS   | `0x80`                                                                        |
+| S_INS | `0x35`                                                                        |
+| OP    | `0x00`                                                                        |
+| lc    | `0xBB` length of name + secret data                                           |
+| DATA  | name length [1 B] \ name [max 10 B] \ secret length [1 B] \ secret [max 64 B] |
 
 | RES      | Data field | Info                        |
-|----------| ---------- | --------------------------- |
+|----------|------------|-----------------------------|
 | `0x9000` |            | success                     |
 | `0x6B00` |            | error                       |
 | `0x6B04` |            | storage full                |
@@ -331,18 +326,20 @@ for (short i = 0; i < myObjects.length; i++) {
 
 
 ### Secure Delete Secret
-| APDU | Values                |
-| ---- | --------------------- |
-| INS  | `0x81`                |
-| OP   | `0x00`                |
-| lc   | `0xBB` length of name |
-| DATA | name                  |
+| APDU   | Values                |
+|--------|-----------------------|
+| INS    | `0x81`                |
+| S_INS  | `0x36`                |
+| P1     | `0x00`                |
+| P2     | `0x00`                |
+| lc     | `0xBB` length of name |
+| DATA   | name                  |
 
-| RES      | Data field | Info         |
-|----------|------------| ------------ |
-| `0x9000` |            | success      |
-| `0x6B00` |            | error        |
-| `0x6B07` |            | no such data |
+| RES      | Data field | Info          |
+|----------|------------|---------------|
+| `0x9000` |            | success       |
+| `0x6B00` |            | error         |
+| `0x6B07` |            | no such data  |
 
 ## Workflows
 
