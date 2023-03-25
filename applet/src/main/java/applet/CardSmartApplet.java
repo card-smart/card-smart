@@ -176,6 +176,9 @@ public class CardSmartApplet extends Applet {
                     case S_INS_GET_NAMES:
                         this.secureGetNames(apdu);
                         break;
+                    case INS_DELETE_SECRET:
+                        this.unsecureDeleteSecret(apdu);
+                        break;
                     default:
                         // The INS code is not supported by the dispatcher
                         ISOException.throwIt(RES_UNSUPPORTED_INS);
@@ -520,6 +523,58 @@ public class CardSmartApplet extends Applet {
         short namesLength = apduBuffer[ISO7816.OFFSET_LC];
         secureChannel.encryptResponse(apduBuffer, namesLength, ISO7816.OFFSET_CDATA, SW);
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, namesLength);
+    }
+
+    /**
+     * Delete secret of given name from filesystem
+     * @param apduBuffer buffer with name
+     * @apiNote authentication required
+     * @apiNote works in both uninitialized and initialized state
+     */
+    private short deleteSecret(byte[] apduBuffer) {
+        /* Check whether user is authenticated */
+        if (!this.getUserAuthenticated()) {
+            return RES_ERR_NOT_LOGGED;
+        }
+        /* Create record in filesystem */
+        try {
+            byte nameLength = apduBuffer[ISO7816.OFFSET_CDATA];
+            short nameOffset = 1 + ISO7816.OFFSET_CDATA;
+            fileSystem.deleteRecord(apduBuffer, nameLength, nameOffset);
+        } catch (StorageException e) {
+            return RES_ERR_STORAGE;
+        } catch (InvalidArgumentException e) {
+            return RES_ERR_SECRET_POLICY;
+        }
+        return RES_SUCCESS;
+    }
+
+    /**
+     * Unsecure delete secret of given name
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = name length, DATA = name
+     * @RESPONSE   none
+     * @apiNote authentication required
+     */
+    void unsecureDeleteSecret(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short SW = deleteSecret(apduBuffer);
+        if (SW != RES_SUCCESS)
+            ISOException.throwIt(SW);
+    }
+
+    /**
+     * Secure delete secret of given name
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = name length, DATA = name
+     * @RESPONSE   none
+     * @apiNote authentication required
+     */
+    void secureDeleteSecret(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        secureChannel.decryptAPDU(apduBuffer);
+        short SW = deleteSecret(apduBuffer);
+        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
     }
 
     /**
