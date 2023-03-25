@@ -168,7 +168,7 @@ public class SecureChannel {
         // 1. initialize MAC algorithm with AES MAC secret key
         mac.init(macKey, Signature.MODE_VERIFY);
         // 2. load data (including instruction bytes) and verify the tag
-        return mac.verify(apduBuffer, (short) 0, dataLength, apduBuffer, macOffset, MAC_SIZE);
+        return mac.verify(apduBuffer, (short) 0, (short) (5 + dataLength), apduBuffer, macOffset, MAC_SIZE);
     }
 
     /**

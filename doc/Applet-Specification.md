@@ -216,7 +216,7 @@ for (short i = 0; i < myObjects.length; i++) {
 | `0x6B01`  |            | not logged in                                         |
 | `0x6B02`  |            | out of tries, secret data deleted, PIN set to default |
 | `0x6B03`  |            | PIN policy not satisfied                              |
-| `0x6B04`  |            | storage full                                          |
+| `0x6B04`  |            | storage                                               |
 | `0x6B05`  |            | name policy not satisfied                             |
 | `0x6B06`  |            | secret policy not satisfied                           |
 | `0x6B07`  |            | no such data                                          |
@@ -229,40 +229,42 @@ for (short i = 0; i < myObjects.length; i++) {
 * `S_INS` denotes instruction code fo secure channel
   * using `INS` when applet is initialized returns response `TODO`
 
-####  Get Names
+#### Get Names
 | APDU  | Values  |
 |-------|---------|
-| INS   | `0x50`  |
+| INS   | `0x20`  |
 | S_INS | `0x30`  |
 | P1    | `0x00`  |
 | P2    | `0x00`  |
 | lc    | `0x00`  |
 | DATA  | ignored |
 
-| RES      | Data field | Info  |
-|----------|------------|-------|
-| `0x9000` |            |       |
-| `0x6B00` |            | error |
+| RES      | Data field | Info                        |
+|----------|------------|-----------------------------|
+| `0x9000` |            |                             |
+| `0x6B00` |            | error                       |
+| `0x6B04` |            | storage error               |
+| `0x6B06` |            | secret policy not satisfied |
 
-### Secure Get PIN Remaining Tries
+### Get PIN Remaining Tries
 | APDU  | Values  |
 |-------|---------|
-| INS   | `0x60`  |
+| INS   | `0x21`  |
 | S_INS | `0x31`  |
 | P1    | `0x00`  |
-| P2    | `0x00`  ||
+| P2    | `0x00`  |
 | lc    | `0x00`  |
 | DATA  | ignored |
 
 | RES      | Data field            | Info  |
-| -------- | --------------------- | ----- |
+|----------|-----------------------|-------|
 | `0x9000` | remaining tries [2 B] |       |
 | `0x6B00` |                       | error |
 
-### Secure PIN Verify
+### PIN Verify
 | APDU  | Values               |
 |-------|----------------------|
-| INS   | `0x61`               |
+| INS   | `0x22`               |
 | S_INS | `0x32`               |
 | P1    | `0x00`               |
 | P2    | `0x00`               |
@@ -276,10 +278,10 @@ for (short i = 0; i < myObjects.length; i++) {
 | `0x6B01` |            | not logged in                                         |
 | `0x6B02` |            | out of tries, secret data deleted, PIN set to default |
 
-### Secure Change PIN
+### Change PIN
 | APDU   | Values                   |
 |--------|--------------------------|
-| INS    | `0x62`                   |
+| INS    | `0x23`                   |
 | S_INS  | `0x33`                   |
 | P1     | `0x00`                   |
 | P2     | `0x00`                   |
@@ -287,15 +289,16 @@ for (short i = 0; i < myObjects.length; i++) {
 | DATA   | new pin [padded to 16 B] |
 
 | RES      | Data field | Info                     |
-|----------|------------| ------------------------ |
+|----------|------------|--------------------------|
 | `0x9000` |            | success                  |
 | `0x6B00` |            | error                    |
+| `0x6B01` |            | not logged in            |
 | `0x6B03` |            | PIN policy not satisfied |
 
 ### Secure Get Value of Secret
 | APDU  | Values                           |
 |-------|----------------------------------|
-| INS   | `0x71`                           |
+| INS   | `0x24`                           |
 | S_INS | `0x34`                           |
 | P1    | `0x00`                           |
 | P2    | `0x00`                           |
@@ -310,7 +313,7 @@ for (short i = 0; i < myObjects.length; i++) {
 ### Secure Store Value of Secret
 | APDU  | Values                                                                        |
 |-------|-------------------------------------------------------------------------------|
-| INS   | `0x80`                                                                        |
+| INS   | `0x25`                                                                        |
 | S_INS | `0x35`                                                                        |
 | OP    | `0x00`                                                                        |
 | lc    | `0xBB` length of name + secret data                                           |
@@ -320,20 +323,20 @@ for (short i = 0; i < myObjects.length; i++) {
 |----------|------------|-----------------------------|
 | `0x9000` |            | success                     |
 | `0x6B00` |            | error                       |
-| `0x6B04` |            | storage full                |
+| `0x6B04` |            | storage                     |
 | `0x6B05` |            | name policy not satisfied   |
 | `0x6B06` |            | secret policy not satisfied |
 
 
 ### Secure Delete Secret
-| APDU   | Values                |
-|--------|-----------------------|
-| INS    | `0x81`                |
-| S_INS  | `0x36`                |
-| P1     | `0x00`                |
-| P2     | `0x00`                |
-| lc     | `0xBB` length of name |
-| DATA   | name                  |
+| APDU  | Values                |
+|-------|-----------------------|
+| INS   | `0x26`                |
+| S_INS | `0x36`                |
+| P1    | `0x00`                |
+| P2    | `0x00`                |
+| lc    | `0xBB` length of name |
+| DATA  | name                  |
 
 | RES      | Data field | Info          |
 |----------|------------|---------------|

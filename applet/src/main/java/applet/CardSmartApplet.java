@@ -14,17 +14,17 @@ public class CardSmartApplet extends Applet {
     /* Set applet into Initialized mode */
     protected static final byte INS_INIT = (byte)0x41;
     /* Unsecure Open Secure Channel */
-    protected static final byte INS_OPEN_SC = (byte)0x41;
+    protected static final byte INS_OPEN_SC = (byte)0x42;
     /* Unsecure Close Secure Channel */
-    protected static final byte INS_CLOSE_SC = (byte)0x42;
+    protected static final byte INS_CLOSE_SC = (byte)0x44;
     /* Unsecure applet operations */
-    protected static final byte INS_GET_NAMES = (byte)0x50;
-    protected static final byte INS_PIN_TRIES = (byte)0x60;
-    protected static final byte INS_PIN_VERIFY = (byte)0x61;
-    protected static final byte INS_PIN_CHANGE = (byte)0x62;
-    protected static final byte INS_GET_SECRET = (byte)0x71;
-    protected static final byte INS_STORE_SECRET = (byte)0x80;
-    protected static final byte INS_DELETE_SECRET = (byte)0x81;
+    protected static final byte INS_GET_NAMES = (byte)0x20;
+    protected static final byte INS_PIN_TRIES = (byte)0x21;
+    protected static final byte INS_PIN_VERIFY = (byte)0x22;
+    protected static final byte INS_PIN_CHANGE = (byte)0x23;
+    protected static final byte INS_GET_SECRET = (byte)0x24;
+    protected static final byte INS_STORE_SECRET = (byte)0x25;
+    protected static final byte INS_DELETE_SECRET = (byte)0x26;
     /* Secure applet operations */
     protected static final byte S_INS_GET_NAMES = (byte)0x30;
     protected static final byte S_INS_PIN_TRIES = (byte)0x31;
@@ -153,16 +153,28 @@ public class CardSmartApplet extends Applet {
                         this.secureGetPINTries(apdu);
                         break;
                     case INS_PIN_VERIFY:
-                        this.verifyPIN(apdu);
+                        this.unsecureVerifyPIN(apdu);
+                        break;
+                    case S_INS_PIN_VERIFY:
+                        this.secureVerifyPIN(apdu);
                         break;
                     case INS_PIN_CHANGE:
-                        this.changePIN(apdu);
+                        this.unsecureChangePIN(apdu);
+                        break;
+                    case S_INS_PIN_CHANGE:
+                        this.secureChangePIN(apdu);
                         break;
                     case INS_STORE_SECRET:
-                        this.storeSecret(apdu);
+                        this.unsecureStoreSecret(apdu);
+                        break;
+                    case S_INS_STORE_SECRET:
+                        this.secureStoreSecret(apdu);
                         break;
                     case INS_GET_NAMES:
-                        this.getNames(apdu);
+                        this.unsecureGetNames(apdu);
+                        break;
+                    case S_INS_GET_NAMES:
+                        this.secureGetNames(apdu);
                         break;
                     default:
                         // The INS code is not supported by the dispatcher
@@ -172,7 +184,6 @@ public class CardSmartApplet extends Applet {
             } else {
                 ISOException.throwIt(RES_UNSUPPORTED_CLA);
             }
-        // TODO: Capture all reasonable exceptions and change into readable ones (instead of 0x6f00)
         } catch (ISOException e) {
             throw e; // Our exception from code, just re-emit
         } catch (Exception e) {
@@ -197,7 +208,6 @@ public class CardSmartApplet extends Applet {
     void getPublicKey(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
-
         // some key should be always generated
         short keyLength = secureChannel.getCardPublicKey(apduBuffer, ISO7816.OFFSET_CDATA);
         apdu.setOutgoingAndSend((short) 0, keyLength);
@@ -250,7 +260,6 @@ public class CardSmartApplet extends Applet {
     /**
      * Get authentication state of applet
      */
-
     private boolean getUserAuthenticated() {
         return this.isUserAuthenticated[0];
     }
@@ -297,75 +306,119 @@ public class CardSmartApplet extends Applet {
 
     /**
      * Verify given PIN and set card into authenticated state
-     *
-     * @param apdu apdu command
-     * @APDU       P1 = 0, P2 = 0, L_c = max 0x7B, DATA = EC public key (LV encoded) + IV + encrypted payload
-     * @RESPONSE   none
-     * @apiNote authentication not required
+     * @param apduBuffer apdu buffer with PIN code of length PIN_MAX_LEN
      * @apiNote works in both uninitialized and initialized state
      */
-    void verifyPIN(APDU apdu) {
-        byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
-
-        /* Verify pin*/
+    short verifyPIN(byte[] apduBuffer) {
         if(!this.pin.check(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN)) {
             byte tries = this.pin.getTriesRemaining();
             if (tries == 0) {
                 try {
                     this.resetToDefault();
                 } catch (StorageException e) {
-                    ISOException.throwIt(RES_ERR_GENERAL);
+                    return RES_ERR_GENERAL;
                 }
             }
             this.setUserAuthenticated(false);
-            ISOException.throwIt(RES_ERR_NOT_LOGGED);
+            return RES_ERR_NOT_LOGGED;
         }
         this.setUserAuthenticated(true);
+        return RES_SUCCESS;
     }
 
     /**
-     * Change current PIN to the PIN in data
-     *
+     * Unsecure verify given PIN and set card into authenticated state
      * @param apdu apdu command
-     * @APDU       P1 = 0, P2 = 0, L_c = max 0x0A, DATA = EC public key (LV encoded) + IV + encrypted payload
+     * @APDU       P1 = 0, P2 = 0, L_c = 0x0A, DATA = PIN code
      * @RESPONSE   none
-     * @apiNote authentication required
-     * @apiNote works in both uninitialized and initialized state
+     * @apiNote authentication not required
      */
-    void changePIN(APDU apdu) {
+    void unsecureVerifyPIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
+        short SW = verifyPIN(apduBuffer);
+        if (SW != RES_SUCCESS)
+            ISOException.throwIt(SW);
+    }
 
+    /**
+     * Secure verify given PIN and set card into authenticated state
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = 0x20, DATA = encrypted PIN | MAC tag
+     * @RESPONSE   encrypted response code | MAC tag
+     * @apiNote authentication not required
+     */
+    void secureVerifyPIN(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
+        secureChannel.decryptAPDU(apduBuffer);
+        short SW = verifyPIN(apduBuffer);
+        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+    }
+
+    /**
+     * Change current PIN to the PIN from APDU data
+     *
+     * @param apduBuffer buffer containing APDU command
+     * @apiNote works in both uninitialized and initialized state
+     */
+    short changePIN(byte[] apduBuffer) {
+        short dataLength = apduBuffer[ISO7816.OFFSET_LC];
         /* Check whether user is authenticated */
         if (!this.getUserAuthenticated()) {
-            ISOException.throwIt(RES_ERR_NOT_LOGGED);
+            return RES_ERR_NOT_LOGGED;
         }
         /* Check that PIN has correct length = maximal length */
         // TODO: Add better check for PIN policy
         if (dataLength != PIN_MAX_LEN) {
-            ISOException.throwIt(RES_ERR_PIN_POLICY);
+            return RES_ERR_PIN_POLICY;
         }
         /* Set new user PIN */
         pin.update(apduBuffer, ISO7816.OFFSET_CDATA, (byte) dataLength);
+        return RES_SUCCESS;
+    }
+
+    /**
+     * Unsecure change current PIN to the PIN from APDU data
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = max 0x0A, DATA = PIN code
+     * @RESPONSE   none
+     * @apiNote authentication required
+     */
+    void unsecureChangePIN(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
+        short SW = changePIN(apduBuffer);
+        if (SW != RES_SUCCESS)
+            ISOException.throwIt(SW);
+    }
+
+    /**
+     * Secure change current PIN to the PIN from APDU data
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = max 0x10, DATA = encrypted(PIN code) [16 B] | MAC tag
+     * @RESPONSE   none
+     * @apiNote authentication required
+     */
+    void secureChangePIN(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
+        secureChannel.decryptAPDU(apduBuffer);
+        short SW = changePIN(apduBuffer);
+        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
     }
 
     /**
      * Store secret into card filesystem with given access name
-     *
-     * @param apdu apdu command
+     * @param apduBuffer buffer with name and secret value
      * @APDU       P1 = 0, P2 = 0, L_c, DATA = name length [1 B] | name [max 10 B] | secret length [1 B] | secret [max 64 B]
-     * @RESPONSE   none
      * @apiNote authentication required
      * @apiNote works in both uninitialized and initialized state
      */
-    void storeSecret(APDU apdu) {
-        byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
-
+    short storeSecret(byte[] apduBuffer) {
         /* Check whether user is authenticated */
         if (!this.getUserAuthenticated()) {
-            ISOException.throwIt(RES_ERR_NOT_LOGGED);
+            return RES_ERR_NOT_LOGGED;
         }
         /* Create record in filesystem */
         try {
@@ -375,37 +428,97 @@ public class CardSmartApplet extends Applet {
             short secretOffset = (short) (1 + ISO7816.OFFSET_CDATA + 1 + nameLength);
             fileSystem.createRecord(apduBuffer, nameLength, nameOffset, secretLength, secretOffset);
         } catch (StorageException e) {
-            ISOException.throwIt(RES_ERR_STORAGE);
+            return RES_ERR_STORAGE;
         } catch (InvalidArgumentException e) {
-            ISOException.throwIt(RES_ERR_SECRET_POLICY);
+            return RES_ERR_SECRET_POLICY;
         }
+        return RES_SUCCESS;
+    }
+
+    /**
+     * Unsecure store secret into card filesystem with given access name
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c, DATA = name length [1 B] | name [max 10 B] | secret length [1 B] | secret [max 64 B]
+     * @RESPONSE   none
+     * @apiNote authentication required
+     */
+    void unsecureStoreSecret(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
+        short SW = storeSecret(apduBuffer);
+        if (SW != RES_SUCCESS)
+            ISOException.throwIt(SW);
+    }
+
+    /**
+     * Secure store secret into card filesystem with given access name
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c, DATA = name length [1 B] | name [max 10 B] | secret length [1 B] | secret [max 64 B]
+     * @RESPONSE   none
+     * @apiNote authentication required
+     */
+    void secureStoreSecret(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataLength = apdu.setIncomingAndReceive();
+        secureChannel.decryptAPDU(apduBuffer);
+        short SW = storeSecret(apduBuffer);
+        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
     }
 
     /**
      * Get names of all secrets stored in the card
-     *
-     * @param apdu apdu command
-     * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
-     * @RESPONSE   LV values of names concatenated together
+     * @param apduBuffer buffer for storing all the names
      * @apiNote authentication not required
      * @apiNote works in both uninitialized and initialized state
      */
-    void getNames(APDU apdu) {
-        byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
-
+    private short getNames(byte[] apduBuffer) {
         /* User does not have to be authenticated */
-        short namesLength = 0;
+        short namesLength;
         try {
             /* Get all names into the temporary buffer */
             namesLength = fileSystem.getAllNames(this.fileSystem.tempArray);
             /* Copy result into response buffer*/
-            Util.arrayCopyNonAtomic(fileSystem.tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA,namesLength);
+            apduBuffer[ISO7816.OFFSET_LC] = (byte) namesLength;
+            Util.arrayCopyNonAtomic(fileSystem.tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA, namesLength);
         } catch (StorageException e) {
-            ISOException.throwIt(RES_ERR_STORAGE);
+            return RES_ERR_STORAGE;
         } catch (InvalidArgumentException e) {
-            ISOException.throwIt(RES_ERR_SECRET_POLICY);
+            return RES_ERR_SECRET_POLICY;
         }
+        return RES_SUCCESS;
+    }
+
+    /**
+     * Unsecure get names of all secrets stored in the card
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
+     * @RESPONSE   LV values of names concatenated together
+     * @apiNote authentication not required
+     */
+    void unsecureGetNames(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short SW = getNames(apduBuffer);
+        if (SW != RES_SUCCESS)
+            ISOException.throwIt(SW);
+        short namesLength = apduBuffer[ISO7816.OFFSET_LC];
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, namesLength);
+    }
+
+    /**
+     * Secure get names of all secrets stored in the card
+     * @param apdu apdu command
+     * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
+     * @RESPONSE   LV values of names concatenated together
+     * @apiNote authentication not required
+     */
+    void secureGetNames(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        secureChannel.decryptAPDU(apduBuffer);
+        short SW = getNames(apduBuffer);
+        if (SW != RES_SUCCESS)
+            ISOException.throwIt(SW);
+        short namesLength = apduBuffer[ISO7816.OFFSET_LC];
+        secureChannel.encryptResponse(apduBuffer, namesLength, ISO7816.OFFSET_CDATA, SW);
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, namesLength);
     }
 
