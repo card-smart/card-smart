@@ -35,20 +35,20 @@ public class CardSmartGetAllNamesTest extends BaseTest {
         CardManager card = connect();
         /* Verify on default PIN */
         byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
-        CommandAPDU cmd = new CommandAPDU(0xB0, 0x61, 0x00, 0x00, data);
+        CommandAPDU cmd = new CommandAPDU(0xB0, 0x22, 0x00, 0x00, data);
         ResponseAPDU responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
 
         /* Store secret on card */
         byte[] secretData = {4, 0x31, 0x32, 0x33, 0x34, 4, 1, 2, 3, 4};
-        cmd = new CommandAPDU(0xB0, 0x80, 0x00, 0x00, secretData);
+        cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData);
         responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
 
         /* Get all names from card*/
-        cmd = new CommandAPDU(0xB0, 0x50, 0x00, 0x00);
+        cmd = new CommandAPDU(0xB0, 0x20, 0x00, 0x00);
         responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
