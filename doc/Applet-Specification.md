@@ -192,9 +192,10 @@ for (short i = 0; i < myObjects.length; i++) {
 | lc   | length of app public key and nonce |
 | DATA | app public key and nonce           |
 
-| RES       | Data field  | Info     |
-|-----------|-------------|----------|
-| `0x9000`  |             | success  |
+| RES      | Data field  | Info                   |
+|----------|-------------|------------------------|
+| `0x9000` |             | success                |
+| `0x6A03` |             | applet not initialized |
 
 #### Close Secure Channel
 | APDU  | Values   |
