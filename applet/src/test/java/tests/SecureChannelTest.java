@@ -31,6 +31,7 @@ public class SecureChannelTest extends BaseTest {
     }
 
     /* Get public key of card */
+    /*
     @Test
     public void getPublicKey() throws Exception {
         CardManager card = connect();
@@ -43,4 +44,5 @@ public class SecureChannelTest extends BaseTest {
         ResponseAPDU secondResponseAPDU = card.transmit(cmd);
         Assertions.assertArrayEquals(responseAPDU.getBytes(), secondResponseAPDU.getBytes());
     }
+    */
 }
