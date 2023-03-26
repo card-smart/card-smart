@@ -17,7 +17,7 @@ Creating a new secret, retrieving the contents of an existing secret, deleting a
 the card into a so-called authenticated state. This is achieved by sending a PIN verification instruction to the card and the PIN in question.
 
 A detailed description of how the applet works can be found in the
-[applet documentation](https://github.com/card-smart/card-smart/blob/main/doc/Applet-Specification.md).
+applet documentation (https://github.com/card-smart/card-smart/blob/main/doc/Applet-Specification.md).
 
 #### Secure channel
 For a secure implementation of the secure channel, we decided to use two more states on the card - initialized and uninitialized.
@@ -40,7 +40,7 @@ of the outgoing response. We use the incoming MAC tag values from the other side
 If the MAC tag authentication fails while processing the incoming APDU, the secure channel is closed, and the current symmetric keys are erased.
 
 A detailed description of secure channel can be found in the
-[secure channel documentation](https://github.com/card-smart/card-smart/blob/secure-channel/doc/Secure-Channel.md).
+secure channel documentation (https://github.com/card-smart/card-smart/blob/main/doc/Secure-Channel.md).
 
 #### Encountered problems
 The first problem we encountered was putting the applet safely into the initialized state.
