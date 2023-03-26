@@ -66,12 +66,12 @@ public class Record {
      * @throw StorageException
      * @return length of the name
      * */
-    public byte getName(byte[] outputBuffer) throws InvalidArgumentException, StorageException {
+    public byte getName(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, StorageException {
         if (outputBuffer.length < this.nameLength) {
             throw new InvalidArgumentException();
         }
         try {
-            Util.arrayCopyNonAtomic(name, (short) 0, outputBuffer, (byte) 0, this.nameLength);
+            Util.arrayCopyNonAtomic(name, (short) 0, outputBuffer, outputOffset, this.nameLength);
         } catch (Exception e) {
             throw new StorageException();
         }
@@ -89,7 +89,7 @@ public class Record {
      * @throw StorageException
      * */
     private void setSecret(byte[] buffer, short secretOffset, byte secretLength) throws InvalidArgumentException, StorageException {
-        if (secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN) {
+        if (secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN || buffer.length < secretOffset + SECRET_MAX_LEN) {
             throw new InvalidArgumentException();
         }
         try {
@@ -112,7 +112,7 @@ public class Record {
      * @return length of concatenated names and their lengths
      * */
     public short getSecret(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, ConsistencyException {
-        if (outputBuffer.length < SECRET_MIN_LEN) {
+        if (outputBuffer.length < SECRET_MIN_LEN || outputBuffer.length < outputOffset + SECRET_MAX_LEN) {
             throw new InvalidArgumentException();
         }
 

@@ -34,7 +34,7 @@ public class SecureChannelTest extends BaseTest {
     @Test
     public void getPublicKey() throws Exception {
         CardManager card = connect();
-        CommandAPDU cmd = new CommandAPDU(0xC0, 0x40, 0x00, 0x00);
+        CommandAPDU cmd = new CommandAPDU(0xB0, 0x40, 0x00, 0x00);
         ResponseAPDU responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
         Assertions.assertEquals(0x9000, responseAPDU.getSW());

@@ -14,7 +14,7 @@ class RecordTest {
         byte[] buffer = new byte[10];
         Record record = new Record();
         try {
-            byte nameLen = record.getName(buffer);
+            byte nameLen = record.getName(buffer, (short) 0);
             Assertions.assertEquals(nameLen, 0);
         } catch (Exception e) {
             Assertions.fail("Getting name failed");
@@ -47,7 +47,7 @@ class RecordTest {
         Assertions.assertArrayEquals(buffer, new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
         try {
-            byte nameLen = record.getName(nameBuffer);
+            byte nameLen = record.getName(nameBuffer, (short) 0);
             Assertions.assertEquals(4, nameLen);
         } catch (Exception e) {
             Assertions.fail("Get name failed");
@@ -59,7 +59,8 @@ class RecordTest {
     @Test
     public void deleteRecord()  {
         byte[] data = {4 /* name len */, 1, 2, 3, 4,
-                10 /* secret len */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+                10 /* secret len */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
         Record record = new Record();
         try {
@@ -77,7 +78,7 @@ class RecordTest {
 
         byte[] buffer = new byte[10];
         try {
-            byte nameLen = record.getName(buffer);
+            byte nameLen = record.getName(buffer, (short) 0);
             Assertions.assertEquals(nameLen, 0);
         } catch (Exception e) {
             Assertions.fail("Erase failed");
