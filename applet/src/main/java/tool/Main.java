@@ -58,6 +58,16 @@ public class Main {
         smartie();
     }
 
+    private static void simulator(Arguments args, CommandLine cmd) {
+        run.getTries();
+        if (args.loginNeeded) {
+            //run.login(args);
+        }
+        if (cmd.hasOption('c')) {
+            //run.changePIN(args);
+        }
+    }
+
     private static void sendAPDU(String[] cmd) throws Exception {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
         Arguments args = new Arguments(cmd_parsed);
@@ -67,34 +77,34 @@ public class Main {
         }
 
         if (simulator) {
-            run.getTries();
+            simulator(args, cmd_parsed);
+            return;
+        }
 
-            if (args.loginNeeded) {
-                //run.login(cb);
-            }
-            if (cmd_parsed.hasOption('c')) {
-                //run.changePIN(cb);
-            }
+        final CardManager cardMngr = cardSelectApplet();
+        if (cardMngr == null) {
             return;
         }
 
         if (args.loginNeeded) {
-            if (!cardGetPINTries()) {
+            if (!cardGetPINTries(cardMngr)) {
                 System.out.println("You exceeded the possible tries for PIN, card is blocked");
             }
-            //login();
+            if (cardVerifyPINOnly(cardMngr, args) != 0) {
+                return;
+            }
         }
 
         if (cmd_parsed.hasOption('l'))
-            cardGetNames();
+            cardGetNames(cardMngr);
         if (cmd_parsed.hasOption('v'))
-            cardGetSecret(args);
+            cardGetSecret(cardMngr, args);
         if (cmd_parsed.hasOption('c'))
-            cardChangePIN(args);
+            cardChangePIN(cardMngr, args);
         if (cmd_parsed.hasOption('s'))
-            cardStoreSecret(args);
+            cardStoreSecret(cardMngr, args);
         if (cmd_parsed.hasOption('d'))
-            cardDeleteSecret(args);
+            cardDeleteSecret(cardMngr, args);
 
         //cardGetPINTries();
         //cardVerifyPIN(); //with x30,x30,x30,x30
@@ -133,22 +143,16 @@ public class Main {
         return cardMngr;
     }
 
-    private static void cardGetNames() throws Exception {
-        final CardManager cardMngr = cardSelectApplet();
-        if (cardMngr == null) {
-            return;
-        }
+    private static CommandAPDU buildAPDU(byte ins, byte[] data) {
+        return new CommandAPDU(0xB0, ins, 0x00, 0x00, data);
+    }
 
+    private static void cardGetNames(CardManager cardMngr) throws Exception {
         ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x20, 0x00, 0x00));
         System.out.println(response); // TODO do something with data
     }
 
-    private static boolean cardGetPINTries() throws Exception {
-        final CardManager cardMngr = cardSelectApplet();
-        if (cardMngr == null) {
-            return false;
-        }
-
+    private static boolean cardGetPINTries(CardManager cardMngr) throws Exception {
         ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x21, 0x00, 0x00));
         System.out.println(response); // TODO do something with data
         return true;
@@ -163,22 +167,15 @@ public class Main {
         return 0;
     }
 
-    private static void cardVerifyPIN(Arguments args) throws Exception {
-        final CardManager cardMngr = cardSelectApplet();
-        if (cardMngr == null) {
-            return;
-        }
+    // this function can be removed?
+    private static void cardVerifyPIN(CardManager cardMngr, Arguments args) throws Exception {
         if (cardVerifyPINOnly(cardMngr, args) != 0) {
             // TODO something here
             return;
         }
     }
 
-    private static void cardChangePIN(Arguments args) throws Exception {
-        final CardManager cardMngr = cardSelectApplet();
-        if (cardMngr == null) {
-            return;
-        }
+    private static void cardChangePIN(CardManager cardMngr, Arguments args) throws Exception {
         if (cardVerifyPINOnly(cardMngr, args) != 0) {
             return;
         }
@@ -188,11 +185,7 @@ public class Main {
         System.out.println(response); // TODO do something with data
     }
 
-    private static void cardGetSecret(Arguments args) throws Exception {
-        final CardManager cardMngr = cardSelectApplet();
-        if (cardMngr == null) {
-            return;
-        }
+    private static void cardGetSecret(CardManager cardMngr, Arguments args) throws Exception {
         if (cardVerifyPINOnly(cardMngr, args) != 0) {
             return;
         }
@@ -204,11 +197,8 @@ public class Main {
         System.out.println(response);
     }
 
-    private static void cardStoreSecret(Arguments args) throws Exception {
-        final CardManager cardMngr = cardSelectApplet();
-        if (cardMngr == null) {
-            return;
-        }
+    private static void cardStoreSecret(CardManager cardMngr, Arguments args) throws Exception {
+
         if (cardVerifyPINOnly(cardMngr, args) != 0) {
             return;
         }
@@ -223,11 +213,7 @@ public class Main {
         System.out.println(response);
     }
 
-    private static void cardDeleteSecret(Arguments args) throws Exception {
-        final CardManager cardMngr = cardSelectApplet();
-        if (cardMngr == null) {
-            return;
-        }
+    private static void cardDeleteSecret(CardManager cardMngr, Arguments args) throws Exception {
         if (cardVerifyPINOnly(cardMngr, args) != 0) {
             return;
         }
