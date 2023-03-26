@@ -58,21 +58,23 @@ public class Arguments {
             }
         }
 
-        if (PIN.length > 10) {
-            return false;
-        }
-        PIN = padPIN(PIN);
-
-        if (newPIN.length > 10) {
-            return false;
-        }
-        newPIN = padPIN(newPIN);
-
-        if (secretName.length > 10) {
-            return false;
+        if (PIN != null) {
+            if (PIN.length > 10)
+                return false;
+            PIN = padPIN(PIN);
         }
 
-        if (secretValue.length > 64) {
+        if (newPIN != null) {
+            if (newPIN.length > 10)
+                return false;
+            newPIN = padPIN(newPIN);
+        }
+
+        if (secretName != null && secretName.length > 10) {
+            return false;
+        }
+
+        if (secretValue != null && secretValue.length > 64) {
             return false;
         }
 

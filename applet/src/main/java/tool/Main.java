@@ -75,7 +75,6 @@ public class Main {
             if (cmd_parsed.hasOption('c')) {
                 //run.changePIN(cb);
             }
-
             return;
         }
 
@@ -83,7 +82,7 @@ public class Main {
             //login();
         }
 
-        //cardGetPINTries();
+        cardGetPINTries();
         //cardVerifyPIN(); //with x30,x30,x30,x30
         //cardChangePIN(); //to x31,x30,x30,x30
         //cardStoreSecret();
