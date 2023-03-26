@@ -60,7 +60,24 @@ We would like to solve this problem by either using the PIN to reinitialize the 
 storage and set a new pairing secret or by the option to use the PIN to set a new pairing secret.
 
 ### Tool
-// TODO Kristína
+We decided to use library apache.commons.cli for parsing the program arguments
+and commands. They can be passed to the tool in two ways:
+- on the same line as the tool is called, e.g., ./card-smart --list
+- or in the shell after the tool is run, which creates a `smartie` prompt that
+will take arguments until the user types in `quit`, e.g., ./card-smart
+    smartie$ --list
+    smartie$ quit
+This was created so that users don't have to call the tool with every
+instruction they want to pass to the smart card and it also saves resources as
+the needed initialization of the tool is done just once.
+
+After parsing, we perform validation of options and arguments with all the
+necessary type conversion or padding to byte arrays. After that, we build APDUs
+with the parsed data and send them for processing to the card applet.
+
+In the next phase, we would like to perfect the output of the card responses and
+overall usability of the tool - better exception handling and more descriptive
+error prints.
 
 ## Technologies
 
