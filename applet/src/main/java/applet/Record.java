@@ -111,16 +111,16 @@ public class Record {
      * @throw StorageException
      * @return length of concatenated names and their lengths
      * */
-    public short getSecret(byte[] outputBuffer) throws InvalidArgumentException, ConsistencyException {
+    public short getSecret(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, ConsistencyException {
         if (outputBuffer.length < SECRET_MIN_LEN || outputBuffer.length > SECRET_MAX_LEN) {
             throw new InvalidArgumentException();
         }
 
         /* Get value of secret */
-        this.secret.getKey(outputBuffer, (short) 0);
+        this.secret.getKey(outputBuffer, outputOffset);
 
         /* Compute checksum of secret */
-        checksum.doFinal(outputBuffer, (short) 0, this.secretLength, tempArray, (short) 0);
+        checksum.doFinal(outputBuffer, outputOffset, this.secretLength, tempArray, (short) 0);
         if (Util.arrayCompare(crc, (short) 0, tempArray, (short) 0, CRC_LEN) != 0) {
             throw new ConsistencyException();
         }

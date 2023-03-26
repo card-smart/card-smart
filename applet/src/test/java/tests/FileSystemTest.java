@@ -131,7 +131,7 @@ class FileSystemTest {
 
         try {
             byte[] buffer2 = new byte[5];
-            short len = fs.getSecretByName(name, (byte)name.length, (short) 0, buffer2);
+            short len = fs.getSecretByName(name, (byte)name.length, (short) 0, buffer2, (short) 0);
             Assertions.assertEquals(len, secret.length);
             Assertions.assertArrayEquals(secret, buffer2);
         } catch (Exception e) {

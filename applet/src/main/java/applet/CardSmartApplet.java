@@ -632,6 +632,32 @@ public class CardSmartApplet extends Applet {
     }
 
     /**
+     * Get secret of given name and copy it into apduBuffer
+     * @param apduBuffer apdu command, data contains name of the secret
+     * @apiNote authentication required
+     * @apiNote works both by initialized and uninitialized mode
+     */
+    short getSecret(byte[] apduBuffer) {
+        // 1. check length of the given name
+        if (apduBuffer[ISO7816.OFFSET_LC] < NAME_MIN_LEN
+                || apduBuffer[ISO7816.OFFSET_LC] > NAME_MAX_LEN) {
+            return RES_ERR_NAME_POLICY;
+        }
+        try {
+            short secretLength = fileSystem.getSecretByName(apduBuffer, apduBuffer[ISO7816.OFFSET_LC],
+                    ISO7816.OFFSET_CDATA, apduBuffer, ISO7816.OFFSET_CDATA);
+            apduBuffer[ISO7816.OFFSET_LC] = (byte) secretLength;
+        } catch (InvalidArgumentException e) {
+            return RES_ERR_NAME_POLICY;
+        } catch (StorageException e) {
+            return RES_ERR_STORAGE;
+        } catch (Exception e) {
+            return RES_ERR_GENERAL;
+        }
+        return RES_SUCCESS;
+    }
+
+    /**
      * Unsecure get secret of given name
      * @param apdu apdu command
      * @APDU       P1 = 0, P2 = 0, L_c = name length, DATA = name
@@ -640,10 +666,10 @@ public class CardSmartApplet extends Applet {
      */
     void unsecureGetSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        // TODO
-//        short SW = getSecret(apduBuffer);
-//        if (SW != RES_SUCCESS)
-//            ISOException.throwIt(SW);
+        short SW = getSecret(apduBuffer);
+        if (SW != RES_SUCCESS)
+            ISOException.throwIt(SW);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, apduBuffer[ISO7816.OFFSET_LC]);
     }
 
     /**
@@ -655,10 +681,10 @@ public class CardSmartApplet extends Applet {
      */
     void secureGetSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        // TODO
         secureChannel.decryptAPDU(apduBuffer);
-//        short SW = getSecret(apduBuffer);
-//        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+        short SW = getSecret(apduBuffer);
+        short encryptedLength = secureChannel.encryptResponse(apduBuffer, apduBuffer[ISO7816.OFFSET_LC], ISO7816.OFFSET_CDATA, SW);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, encryptedLength);
     }
 
     /**

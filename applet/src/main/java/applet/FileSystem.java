@@ -143,7 +143,8 @@ public class FileSystem {
      * @throw InvalidArgumentException
      * @throw StorageException
      */
-    public short getSecretByName(byte[] name, byte nameLength, short nameOffset, byte[] outputBuffer) throws InvalidArgumentException, ConsistencyException, StorageException {
+    public short getSecretByName(byte[] name, byte nameLength, short nameOffset, byte[] outputBuffer, short outputOffset)
+            throws InvalidArgumentException, ConsistencyException, StorageException {
         if (name == null || nameLength < 0
                 || outputBuffer == null || outputBuffer.length == 0) {
             throw new InvalidArgumentException();
@@ -154,7 +155,7 @@ public class FileSystem {
             return 0;
         }
 
-        return records[index].getSecret(outputBuffer);
+        return records[index].getSecret(outputBuffer, outputOffset);
     }
 
     /**

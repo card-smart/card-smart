@@ -39,7 +39,7 @@ class RecordTest {
         byte[] buffer = new byte[32];
         byte[] nameBuffer = new byte[4];
         try {
-            short secretLen = record.getSecret(buffer);
+            short secretLen = record.getSecret(buffer, (short) 0);
             Assertions.assertEquals(10, secretLen);
         } catch (Exception e) {
             Assertions.fail("Get secret failed");
