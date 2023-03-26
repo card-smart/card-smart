@@ -26,8 +26,6 @@ public class Main {
 
         /*
         This is for our testing - on simulator or on a real card - specified above,
-        simulator is the default and only call, as the real card is not implemented yet
-
         You can use either sendAPDU() function where you can specify
         command line arguments in an array to avoid writing them each time:
 
@@ -48,7 +46,6 @@ public class Main {
             return;
         }
 
-        // THIS IS FOR RELEASE, NOT TESTING
         if (args.length > 0) {
             CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, args);
             // TODO call desired instruction
@@ -97,14 +94,16 @@ public class Main {
 
         if (cmd_parsed.hasOption('l'))
             cardGetNames(cardMngr);
-        if (cmd_parsed.hasOption('v'))
+        else if (cmd_parsed.hasOption('v'))
             cardGetSecret(cardMngr, args);
-        if (cmd_parsed.hasOption('c'))
+        else if (cmd_parsed.hasOption('c'))
             cardChangePIN(cardMngr, args);
-        if (cmd_parsed.hasOption('s'))
+        else if (cmd_parsed.hasOption('s'))
             cardStoreSecret(cardMngr, args);
-        if (cmd_parsed.hasOption('d'))
+        else if (cmd_parsed.hasOption('d'))
             cardDeleteSecret(cardMngr, args);
+        else if (cmd_parsed.hasOption('p')) // this optin has to be always the last
+            cardVerifyPIN(cardMngr, args);
 
         //cardGetPINTries();
         //cardVerifyPIN(); //with x30,x30,x30,x30
@@ -143,23 +142,24 @@ public class Main {
         return cardMngr;
     }
 
-    private static CommandAPDU buildAPDU(byte ins, byte[] data) {
+    private static CommandAPDU buildAPDU(int ins, byte[] data) {
         return new CommandAPDU(0xB0, ins, 0x00, 0x00, data);
     }
 
     private static void cardGetNames(CardManager cardMngr) throws Exception {
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x20, 0x00, 0x00));
+        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x20, new byte[]{}));
         System.out.println(response); // TODO do something with data
     }
 
     private static boolean cardGetPINTries(CardManager cardMngr) throws Exception {
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x21, 0x00, 0x00));
-        System.out.println(response); // TODO do something with data
+        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x21, new byte[]{}));
+        System.out.println(response);
+        // TODO validate we have enough PIN tries
         return true;
     }
 
     private static int cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException {
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x22, 0x00, 0x00, args.PIN));
+        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x22, args.PIN));
         if (response.getSW() != 0x9000) {
             System.out.print("Error verify pin TODO");
             return 1;
@@ -167,7 +167,6 @@ public class Main {
         return 0;
     }
 
-    // this function can be removed?
     private static void cardVerifyPIN(CardManager cardMngr, Arguments args) throws Exception {
         if (cardVerifyPINOnly(cardMngr, args) != 0) {
             // TODO something here
@@ -176,50 +175,27 @@ public class Main {
     }
 
     private static void cardChangePIN(CardManager cardMngr, Arguments args) throws Exception {
-        if (cardVerifyPINOnly(cardMngr, args) != 0) {
-            return;
-        }
-        // TODO get data from Options or by function parameter
-        //byte[] data = {0x31, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0}; //default pin, need to be padded to 10 B
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x23, 0x00, 0x00, args.PIN));
-        System.out.println(response); // TODO do something with data
+        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x23, args.PIN));
+        System.out.println(response);
+        // TODO do something with data
     }
 
     private static void cardGetSecret(CardManager cardMngr, Arguments args) throws Exception {
-        if (cardVerifyPINOnly(cardMngr, args) != 0) {
-            return;
-        }
-
-        // get secret
-        // TODO get data from Options or by function parameter
-        //byte[] name = {0x31, 0x32, 0x33, 0x34};
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x24, 0x00, 0x00, args.secretName));
+        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x24, args.secretName));
         System.out.println(response);
     }
 
     private static void cardStoreSecret(CardManager cardMngr, Arguments args) throws Exception {
-
-        if (cardVerifyPINOnly(cardMngr, args) != 0) {
-            return;
-        }
-
-        // store secret
-        // TODO get data from Options or by function parameter
         byte[] r = Arguments.concat(new byte[]{(byte) args.secretName.length}, args.secretName,
                 new byte[]{(byte) args.secretValue.length}, args.secretValue);
         byte[] data = Arrays.copyOf(r, 76);
 
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x25, 0x00, 0x00, data));
+        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x25, data));
         System.out.println(response);
     }
 
     private static void cardDeleteSecret(CardManager cardMngr, Arguments args) throws Exception {
-        if (cardVerifyPINOnly(cardMngr, args) != 0) {
-            return;
-        }
-
-        // delete secret
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x26, 0x00, 0x00, args.secretName));
+        ResponseAPDU response = cardMngr.transmit(buildAPDU( 0x26, args.secretName));
         System.out.println(response);
     }
 }
