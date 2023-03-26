@@ -9,6 +9,7 @@ import org.apache.commons.cli.CommandLine;
 import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -89,7 +90,6 @@ public class Main {
         //cardGetNames();
         //cardDeleteSecret();
         //cardGetNames();
-
     }
 
     private static void smartie() throws Exception {
@@ -141,9 +141,7 @@ public class Main {
     }
 
     private static int cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException {
-        // TODO get pin from Options or by function parameter
-        byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0}; //default pin, need to be padded to 10 B
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x22, 0x00, 0x00, data));
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x22, 0x00, 0x00, args.PIN));
         if (response.getSW() != 0x9000) {
             System.out.print("Error verify pin TODO");
             return 1;
@@ -171,8 +169,8 @@ public class Main {
             return;
         }
         // TODO get data from Options or by function parameter
-        byte[] data = {0x31, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0}; //default pin, need to be padded to 10 B
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x23, 0x00, 0x00, data));
+        //byte[] data = {0x31, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0}; //default pin, need to be padded to 10 B
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x23, 0x00, 0x00, args.PIN));
         System.out.println(response); // TODO do something with data
     }
 
@@ -187,8 +185,8 @@ public class Main {
 
         // get secret
         // TODO get data from Options or by function parameter
-        byte[] name = {0x31, 0x32, 0x33, 0x34};
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x24, 0x00, 0x00, name));
+        //byte[] name = {0x31, 0x32, 0x33, 0x34};
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x24, 0x00, 0x00, args.secretName));
         System.out.println(response);
     }
 
@@ -203,8 +201,12 @@ public class Main {
 
         // store secret
         // TODO get data from Options or by function parameter
-        byte[] secretData = {4, 0x31, 0x32, 0x33, 0x34, 4, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData));
+        byte[] r = Arguments.concat(new byte[]{(byte) args.secretName.length}, args.secretName,
+                new byte[]{(byte) args.secretValue.length}, args.secretValue);
+        byte[] data = Arrays.copyOf(r, 76);
+
+        //byte[] secretData = {4, 0x31, 0x32, 0x33, 0x34, 4, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x25, 0x00, 0x00, data));
         System.out.println(response);
     }
 
@@ -218,9 +220,7 @@ public class Main {
         }
 
         // delete secret
-        // TODO get data from Options or by function parameter
-        byte[] name = {4 ,0x31, 0x32, 0x33, 0x34};
-        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x26, 0x00, 0x00, name));
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x26, 0x00, 0x00, args.secretName));
         System.out.println(response);
     }
 }
