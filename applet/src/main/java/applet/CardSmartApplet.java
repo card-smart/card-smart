@@ -8,7 +8,7 @@ public class CardSmartApplet extends Applet {
      * APDU Instruction Codes
      */
     /* CLA byte, specific for the applet */
-    protected static final byte CLA_CARDSMARTAPPLET = (byte)0xC0;
+    protected static final byte CLA_CARDSMARTAPPLET = (byte)0xB0;
     /* Unsecure Get Card EC Public Key */
     protected static final byte INS_GET_PUBLIC_KEY = (byte)0x40;
     /* Unsecure Open Secure Channel */
@@ -65,7 +65,7 @@ public class CardSmartApplet extends Applet {
     protected static final byte NAME_MAX_LEN = (byte)10;
     /* Secret' constants */
     protected static final byte SECRET_MIN_LEN = (byte)2;
-    protected static final byte SECRET_MAX_LEN = (byte)64;
+    protected static final byte SECRET_MAX_LEN = (byte)32;
 
     /* Cryptographic instances */
     private OwnerPIN pin = null;
@@ -73,15 +73,15 @@ public class CardSmartApplet extends Applet {
     /*
      * Other instances
      */
-    FileSystem fileSystem;
+    FileSystem fileSystem = null;
     private static final short TEMP_ARRAY_LEN = (short) 256;
-    private byte[] tempArray = null;
+    //private byte[] tempArray = null;
     private boolean[] isUserAuthenticated = null;
 
     public CardSmartApplet(byte[] bArray, short bOffset, byte bLength) {
 
         /* Create temporary array */
-        this.tempArray = JCSystem.makeTransientByteArray(TEMP_ARRAY_LEN, JCSystem.CLEAR_ON_DESELECT);
+        //this.tempArray = JCSystem.makeTransientByteArray(TEMP_ARRAY_LEN, JCSystem.CLEAR_ON_DESELECT);
 
         /* Set initial PIN */
         this.pin = new OwnerPIN(PIN_MAX_TRIES, PIN_MAX_LEN); // 5 tries, max 10 digits in pin
@@ -163,11 +163,11 @@ public class CardSmartApplet extends Applet {
 
     void getPINTries(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
+        //short dataLength = apdu.setIncomingAndReceive();
 
         byte tries = pin.getTriesRemaining();
-        tempArray[0] = tries;
-        Util.arrayCopyNonAtomic(this.tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA, (short) 1);
+        this.fileSystem.tempArray[0] = tries;
+        Util.arrayCopyNonAtomic(this.fileSystem.tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA, (short) 1);
 
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, (short) 1);
     }
@@ -238,9 +238,9 @@ public class CardSmartApplet extends Applet {
         short namesLength = 0;
         try {
             /* Get all names into the temporary buffer */
-            namesLength = fileSystem.getAllNames(tempArray);
+            namesLength = fileSystem.getAllNames(this.fileSystem.tempArray);
             /* Copy result into response buffer*/
-            Util.arrayCopyNonAtomic(tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA,namesLength);
+            Util.arrayCopyNonAtomic(fileSystem.tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA,namesLength);
         } catch (StorageException e) {
             ISOException.throwIt(RES_ERR_STORAGE_FULL);
         } catch (InvalidArgumentException e) {
