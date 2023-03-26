@@ -66,12 +66,12 @@ public class Record {
      * @throw StorageException
      * @return length of the name
      * */
-    public byte getName(byte[] outputBuffer) throws InvalidArgumentException, StorageException {
+    public byte getName(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, StorageException {
         if (outputBuffer.length < this.nameLength) {
             throw new InvalidArgumentException();
         }
         try {
-            Util.arrayCopyNonAtomic(name, (short) 0, outputBuffer, (byte) 0, this.nameLength);
+            Util.arrayCopyNonAtomic(name, (short) 0, outputBuffer, outputOffset, this.nameLength);
         } catch (Exception e) {
             throw new StorageException();
         }
@@ -89,7 +89,7 @@ public class Record {
      * @throw StorageException
      * */
     private void setSecret(byte[] buffer, short secretOffset, byte secretLength) throws InvalidArgumentException, StorageException {
-        if (secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN) {
+        if (secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN || buffer.length < secretOffset + SECRET_MAX_LEN) {
             throw new InvalidArgumentException();
         }
         try {
@@ -111,16 +111,16 @@ public class Record {
      * @throw StorageException
      * @return length of concatenated names and their lengths
      * */
-    public short getSecret(byte[] outputBuffer) throws InvalidArgumentException, ConsistencyException {
-        if (outputBuffer.length < SECRET_MIN_LEN || outputBuffer.length > SECRET_MAX_LEN) {
+    public short getSecret(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, ConsistencyException {
+        if (outputBuffer.length < SECRET_MIN_LEN || outputBuffer.length < outputOffset + SECRET_MAX_LEN) {
             throw new InvalidArgumentException();
         }
 
         /* Get value of secret */
-        this.secret.getKey(outputBuffer, (short) 0);
+        this.secret.getKey(outputBuffer, outputOffset);
 
         /* Compute checksum of secret */
-        checksum.doFinal(outputBuffer, (short) 0, this.secretLength, tempArray, (short) 0);
+        checksum.doFinal(outputBuffer, outputOffset, this.secretLength, tempArray, (short) 0);
         if (Util.arrayCompare(crc, (short) 0, tempArray, (short) 0, CRC_LEN) != 0) {
             throw new ConsistencyException();
         }

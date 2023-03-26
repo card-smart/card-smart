@@ -73,7 +73,7 @@ public class FileSystem {
         for (byte index = 0; index < RECORDS_MAX_NUMBER; index++) {
             if (records[index].isEmpty() == 1)
                 continue;
-            byte len = records[index].getName(tempArray);
+            byte len = records[index].getName(tempArray, (short) 0);
             if (len == nameLength
                     && Util.arrayCompare(name, nameOffset, tempArray, (short) 0, nameLength) == 0) {
                 return index;
@@ -143,7 +143,8 @@ public class FileSystem {
      * @throw InvalidArgumentException
      * @throw StorageException
      */
-    public short getSecretByName(byte[] name, byte nameLength, short nameOffset, byte[] outputBuffer) throws InvalidArgumentException, ConsistencyException, StorageException {
+    public short getSecretByName(byte[] name, byte nameLength, short nameOffset, byte[] outputBuffer, short outputOffset)
+            throws InvalidArgumentException, ConsistencyException, StorageException {
         if (name == null || nameLength < 0
                 || outputBuffer == null || outputBuffer.length == 0) {
             throw new InvalidArgumentException();
@@ -154,7 +155,7 @@ public class FileSystem {
             return 0;
         }
 
-        return records[index].getSecret(outputBuffer);
+        return records[index].getSecret(outputBuffer, outputOffset);
     }
 
     /**
@@ -173,9 +174,8 @@ public class FileSystem {
         for (short index = 0; index < RECORDS_MAX_NUMBER; index++) {
             if (records[index].isEmpty() == 1)
                 continue;
-            byte len = records[index].getName(tempArray);
+            byte len = records[index].getName(outputBuffer, (short) (offset + 1));
             outputBuffer[offset] = len;
-            Util.arrayCopyNonAtomic(this.tempArray, (short) 0, outputBuffer, (short) (offset + 1), len);
             offset += 1 + len;
         }
         return offset;
