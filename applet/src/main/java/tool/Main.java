@@ -8,6 +8,7 @@ import main.Run;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
 
+import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 import java.io.IOException;
@@ -84,20 +85,14 @@ public class Main {
             //login();
         }
 
-        final CardManager cardMngr = new CardManager(true, APPLET_AID_BYTE);
-        final RunConfig runCfg = RunConfig.getDefaultConfig();
-        runCfg.setTestCardType(RunConfig.CARD_TYPE.PHYSICAL); // Use real card
-        // Connect to first available card
-        // NOTE: selects target applet based on AID specified in CardManager constructor
-        System.out.print("Connecting to card...");
-        if (!cardMngr.Connect(runCfg)) {
-            System.out.println(" Failed.");
-            return;
-        }
-        System.out.println(" Done.");
-        final ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x60, 0x00, 0x00));
-        byte[] data = response.getData();
-        System.out.println(response);
+        //cardGetPINTries();
+        //cardVerifyPIN(); //with x30,x30,x30,x30
+        //cardChangePIN(); //to x31,x30,x30,x30
+        //cardStoreSecret();
+        //cardGetNames();
+        //cardDeleteSecret();
+        //cardGetNames();
+
     }
 
     private static void smartie() throws Exception {
@@ -111,5 +106,124 @@ public class Main {
 
             System.out.print("smartie$ ");
         }
+    }
+
+    private static CardManager cardSelectApplet() throws Exception {
+        CardManager cardMngr = new CardManager(true, APPLET_AID_BYTE);
+        final RunConfig runCfg = RunConfig.getDefaultConfig();
+        runCfg.setTestCardType(RunConfig.CARD_TYPE.PHYSICAL); // Use real card
+        // Connect to first available card
+        // NOTE: selects target applet based on AID specified in CardManager constructor
+        System.out.print("Connecting to card...");
+        if (!cardMngr.Connect(runCfg)) {
+            System.out.println(" Failed.");
+            return null;
+        }
+        System.out.println(" Done.");
+        return cardMngr;
+    }
+
+    private static void cardGetNames() throws Exception {
+        final CardManager cardMngr = cardSelectApplet();
+        if (cardMngr == null) {
+            return;
+        }
+
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x20, 0x00, 0x00));
+        System.out.println(response); // TODO do something with data
+    }
+
+    private static void cardGetPINTries() throws Exception {
+        final CardManager cardMngr = cardSelectApplet();
+        if (cardMngr == null) {
+            return;
+        }
+
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x21, 0x00, 0x00));
+        System.out.println(response); // TODO do something with data
+    }
+
+    private static int cardVerifyPINOnly(CardManager cardMngr) throws CardException {
+        // TODO get pin from Options or by function parameter
+        byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0}; //default pin, need to be padded to 10 B
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x22, 0x00, 0x00, data));
+        if (response.getSW() != 0x9000) {
+            System.out.print("Error verify pin TODO");
+            return 1;
+        }
+        return 0;
+    }
+
+    private static void cardVerifyPIN() throws Exception {
+        final CardManager cardMngr = cardSelectApplet();
+        if (cardMngr == null) {
+            return;
+        }
+        if (cardVerifyPINOnly(cardMngr) != 0) {
+            // TODO something here
+            return;
+        }
+    }
+
+    private static void cardChangePIN() throws Exception {
+        final CardManager cardMngr = cardSelectApplet();
+        if (cardMngr == null) {
+            return;
+        }
+        if (cardVerifyPINOnly(cardMngr) != 0) {
+            return;
+        }
+        // TODO get data from Options or by function parameter
+        byte[] data = {0x31, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0}; //default pin, need to be padded to 10 B
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x23, 0x00, 0x00, data));
+        System.out.println(response); // TODO do something with data
+    }
+
+    private static void cardGetSecret() throws Exception {
+        final CardManager cardMngr = cardSelectApplet();
+        if (cardMngr == null) {
+            return;
+        }
+        if (cardVerifyPINOnly(cardMngr) != 0) {
+            return;
+        }
+
+        // get secret
+        // TODO get data from Options or by function parameter
+        byte[] name = {0x31, 0x32, 0x33, 0x34};
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x24, 0x00, 0x00, name));
+        System.out.println(response);
+    }
+
+    private static void cardStoreSecret() throws Exception {
+        final CardManager cardMngr = cardSelectApplet();
+        if (cardMngr == null) {
+            return;
+        }
+        if (cardVerifyPINOnly(cardMngr) != 0) {
+            return;
+        }
+
+        // store secret
+        // TODO get data from Options or by function parameter
+        byte[] secretData = {4, 0x31, 0x32, 0x33, 0x34, 4, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData));
+        System.out.println(response);
+    }
+
+    private static void cardDeleteSecret() throws Exception {
+        final CardManager cardMngr = cardSelectApplet();
+        if (cardMngr == null) {
+            return;
+        }
+        if (cardVerifyPINOnly(cardMngr) != 0) {
+            return;
+        }
+
+        // delete secret
+        // TODO get data from Options or by function parameter
+        byte[] name = {4 ,0x31, 0x32, 0x33, 0x34};
+        ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x26, 0x00, 0x00, name));
+        System.out.println(response);
     }
 }
