@@ -79,10 +79,24 @@ public class Main {
         }
 
         if (args.loginNeeded) {
+            if (!cardGetPINTries()) {
+                System.out.println("You exceeded the possible tries for PIN, card is blocked");
+            }
             //login();
         }
 
-        cardGetPINTries();
+        if (cmd_parsed.hasOption('l'))
+            cardGetNames();
+        if (cmd_parsed.hasOption('v'))
+            cardGetSecret(args);
+        if (cmd_parsed.hasOption('c'))
+            cardChangePIN(args);
+        if (cmd_parsed.hasOption('s'))
+            cardStoreSecret(args);
+        if (cmd_parsed.hasOption('d'))
+            cardDeleteSecret(args);
+
+        //cardGetPINTries();
         //cardVerifyPIN(); //with x30,x30,x30,x30
         //cardChangePIN(); //to x31,x30,x30,x30
         //cardStoreSecret();
@@ -129,14 +143,15 @@ public class Main {
         System.out.println(response); // TODO do something with data
     }
 
-    private static void cardGetPINTries() throws Exception {
+    private static boolean cardGetPINTries() throws Exception {
         final CardManager cardMngr = cardSelectApplet();
         if (cardMngr == null) {
-            return;
+            return false;
         }
 
         ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x21, 0x00, 0x00));
         System.out.println(response); // TODO do something with data
+        return true;
     }
 
     private static int cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException {
@@ -204,7 +219,6 @@ public class Main {
                 new byte[]{(byte) args.secretValue.length}, args.secretValue);
         byte[] data = Arrays.copyOf(r, 76);
 
-        //byte[] secretData = {4, 0x31, 0x32, 0x33, 0x34, 4, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x25, 0x00, 0x00, data));
         System.out.println(response);
     }
