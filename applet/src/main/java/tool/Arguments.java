@@ -5,8 +5,9 @@ import org.apache.commons.cli.CommandLine;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
-public class Callback {
+public class Arguments {
     CommandLine cmd;
     public byte[] PIN;
     public byte[] secretName;
@@ -15,7 +16,7 @@ public class Callback {
     public byte[] newPIN;
     public boolean loginNeeded = true;
 
-    public Callback(CommandLine cmd) {
+    public Arguments(CommandLine cmd) {
         this.cmd = cmd;
 
         if (cmd.hasOption('p')) {
@@ -38,6 +39,10 @@ public class Callback {
         }
     }
 
+    public byte[] padPIN() {
+        return Arrays.copyOf(PIN, 10);
+    }
+
     public boolean validateInput() throws IOException {
         // here we want to validate length of given inputs and stuff
 
@@ -45,10 +50,17 @@ public class Callback {
             try {
                 secretValue = Files.readAllBytes(Paths.get(cmd.getOptionValue('i')));
             } catch (IOException e) {
-
+                return false;
+            }
+            if (secretValue.length < 1) {
                 return false;
             }
         }
+
+        if (PIN.length > 10) {
+            return false;
+        }
+        PIN = padPIN();
 
         return true;
     }

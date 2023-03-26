@@ -3,15 +3,12 @@ package tool;
 import cardTools.CardManager;
 import cardTools.RunConfig;
 import cardTools.Util;
-import jdk.nashorn.internal.codegen.CompilerConstants;
 import main.Run;
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.ParseException;
 
 import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import java.io.IOException;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -62,16 +59,16 @@ public class Main {
 
     private static void sendAPDU(String[] cmd) throws Exception {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
-        Callback cb = new Callback(cmd_parsed);
+        Arguments args = new Arguments(cmd_parsed);
 
-        if (!cb.validateInput()) {
+        if (!args.validateInput()) {
             return;
         }
 
         if (simulator) {
             run.getTries();
 
-            if (cb.loginNeeded) {
+            if (args.loginNeeded) {
                 //run.login(cb);
             }
             if (cmd_parsed.hasOption('c')) {
@@ -81,7 +78,7 @@ public class Main {
             return;
         }
 
-        if (cb.loginNeeded) {
+        if (args.loginNeeded) {
             //login();
         }
 
@@ -143,7 +140,7 @@ public class Main {
         System.out.println(response); // TODO do something with data
     }
 
-    private static int cardVerifyPINOnly(CardManager cardMngr) throws CardException {
+    private static int cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException {
         // TODO get pin from Options or by function parameter
         byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0}; //default pin, need to be padded to 10 B
         ResponseAPDU response = cardMngr.transmit(new CommandAPDU(0xB0, 0x22, 0x00, 0x00, data));
@@ -154,23 +151,23 @@ public class Main {
         return 0;
     }
 
-    private static void cardVerifyPIN() throws Exception {
+    private static void cardVerifyPIN(Arguments args) throws Exception {
         final CardManager cardMngr = cardSelectApplet();
         if (cardMngr == null) {
             return;
         }
-        if (cardVerifyPINOnly(cardMngr) != 0) {
+        if (cardVerifyPINOnly(cardMngr, args) != 0) {
             // TODO something here
             return;
         }
     }
 
-    private static void cardChangePIN() throws Exception {
+    private static void cardChangePIN(Arguments args) throws Exception {
         final CardManager cardMngr = cardSelectApplet();
         if (cardMngr == null) {
             return;
         }
-        if (cardVerifyPINOnly(cardMngr) != 0) {
+        if (cardVerifyPINOnly(cardMngr, args) != 0) {
             return;
         }
         // TODO get data from Options or by function parameter
@@ -179,12 +176,12 @@ public class Main {
         System.out.println(response); // TODO do something with data
     }
 
-    private static void cardGetSecret() throws Exception {
+    private static void cardGetSecret(Arguments args) throws Exception {
         final CardManager cardMngr = cardSelectApplet();
         if (cardMngr == null) {
             return;
         }
-        if (cardVerifyPINOnly(cardMngr) != 0) {
+        if (cardVerifyPINOnly(cardMngr, args) != 0) {
             return;
         }
 
@@ -195,12 +192,12 @@ public class Main {
         System.out.println(response);
     }
 
-    private static void cardStoreSecret() throws Exception {
+    private static void cardStoreSecret(Arguments args) throws Exception {
         final CardManager cardMngr = cardSelectApplet();
         if (cardMngr == null) {
             return;
         }
-        if (cardVerifyPINOnly(cardMngr) != 0) {
+        if (cardVerifyPINOnly(cardMngr, args) != 0) {
             return;
         }
 
@@ -211,12 +208,12 @@ public class Main {
         System.out.println(response);
     }
 
-    private static void cardDeleteSecret() throws Exception {
+    private static void cardDeleteSecret(Arguments args) throws Exception {
         final CardManager cardMngr = cardSelectApplet();
         if (cardMngr == null) {
             return;
         }
-        if (cardVerifyPINOnly(cardMngr) != 0) {
+        if (cardVerifyPINOnly(cardMngr, args) != 0) {
             return;
         }
 
