@@ -1,4 +1,4 @@
-# [PV204] Project report, phase I.
+# [PV204] Project report, phase II.
 Veronika Hanulíková (492760), Kristína Hanicová (492779), Lubomír Hrbáček (493077)
 ## Project design
 ### JavaCard Applet
@@ -49,7 +49,7 @@ we could not find a way to provide mutual authentication during initialization w
 
 Since the card offers only a limited amount of memory, we decided to limit the maximum size of stored secrets.
 To ensure security, we first used the `HMACKey` object for storage, which allows up to 64 bytes to be stored.
-However, this object was not supported by the card, so we had to replace it with an `AESKEy` object.
+However, this object was not supported by the card, so we had to replace it with an `AESKey` object which stores up to 32 bytes.
 
 For now, the pairing secret cannot be changed in any way after the applet is initialized.
 We would like to solve this problem by either using the PIN to reinitialize the applet and clear the
@@ -72,7 +72,18 @@ MAC tag calculation, and encryption along with decryption. We use the `javacard.
 libraries for these purposes.
 
 ### Gradle
-// TODO Lubomír
+We use [Javacard Gradle Template](https://github.com/ph4r05/javacard-gradle-template) as the skeleton for our project.
+This template based on Gradle tasks provides, among other things:
+
+- building the entire project
+- building the applet into CAP file via Ant with option to choose various JC-SDKS
+- installation and deletion of the built CAP file into the Javacard smartcard via GlobalPlatformPro
+- together with the IntelliJ IDE running tests in united format and displaying their results in web browser
+
+### CardTools package
+We use this package (from Petr Svenda and others), mainly CardManager class, to connect the tool to the Javacard smartcard.
+We got it from [JC Gradle Template Edu](https://github.com/crocs-muni/javacard-gradle-template-edu/tree/master/applet/src/test/java/cardTools).
+It provides clean functions that communicates with Java API for communication with connected cards and readers.
 
 ## Current progress
 * Applet is able to work with PIN, store, retrieve and delete secrets
