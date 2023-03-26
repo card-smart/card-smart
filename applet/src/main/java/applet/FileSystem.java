@@ -19,7 +19,7 @@ public class FileSystem {
      */
     private final Record[] records;
     private short numberOfRecords;
-    private final byte[] tempArray;
+    public final byte[] tempArray;
 
     /**
      * Constructor for creating card filesystem
@@ -33,7 +33,7 @@ public class FileSystem {
 
         numberOfRecords = 0;
         /* Temporal array for storing values */
-        tempArray = JCSystem.makeTransientByteArray(TEMP_ARRAY_LEN, JCSystem.CLEAR_ON_DESELECT);
+        this.tempArray = JCSystem.makeTransientByteArray(TEMP_ARRAY_LEN, JCSystem.CLEAR_ON_DESELECT);
     }
 
     /**
@@ -73,7 +73,7 @@ public class FileSystem {
         for (byte index = 0; index < RECORDS_MAX_NUMBER; index++) {
             if (records[index].isEmpty() == 1)
                 continue;
-            byte len = records[index].getName(tempArray);
+            byte len = records[index].getName(tempArray, (short) 0);
             if (len == nameLength
                     && Util.arrayCompare(name, nameOffset, tempArray, (short) 0, nameLength) == 0) {
                 return index;
@@ -95,15 +95,15 @@ public class FileSystem {
      */
     public void createRecord(byte[] buffer, byte nameLength, short nameOffset, byte secretLength, short secretOffset) throws StorageException, InvalidArgumentException {
         if (buffer == null || nameLength <= 0 || secretLength <= 0) {
-            throw new InvalidArgumentException("Invalid arguments when creating record");
+            throw new InvalidArgumentException();
         }
         if (nameLength < 4 || nameLength > 10 || secretLength > 64) {
-            throw new InvalidArgumentException("Invalid name or secret length");
+            throw new InvalidArgumentException();
         }
 
         byte index = getIndexOfFirstEmptyRecord();
         if (index < 0) {
-            throw new StorageException("Storage full");
+            throw new StorageException();
         }
         records[index].initRecord(buffer, nameLength, nameOffset, secretLength, secretOffset);
         numberOfRecords++;
@@ -121,13 +121,13 @@ public class FileSystem {
      */
     public void deleteRecord(byte[] buffer, byte nameLength, short nameOffset) throws InvalidArgumentException, StorageException {
         if (nameLength < 0) {
-            throw new InvalidArgumentException("Invalid length of name");
+            throw new InvalidArgumentException();
         }
 
         /* Find index of given record */
         byte index = getIndexByName(buffer, nameLength, nameOffset);
         if (index < 0) {
-            throw new StorageException("No record with given name exists");
+            throw new StorageException();
         }
         records[index].eraseRecord();
         numberOfRecords--;
@@ -143,10 +143,11 @@ public class FileSystem {
      * @throw InvalidArgumentException
      * @throw StorageException
      */
-    public short getSecretByName(byte[] name, byte nameLength, short nameOffset, byte[] outputBuffer) throws InvalidArgumentException, ConsistencyException, StorageException {
+    public short getSecretByName(byte[] name, byte nameLength, short nameOffset, byte[] outputBuffer, short outputOffset)
+            throws InvalidArgumentException, ConsistencyException, StorageException {
         if (name == null || nameLength < 0
                 || outputBuffer == null || outputBuffer.length == 0) {
-            throw new InvalidArgumentException("Invalid arguments when getting secret by name");
+            throw new InvalidArgumentException();
         }
 
         byte index = getIndexByName(name, nameLength, nameOffset);
@@ -154,7 +155,7 @@ public class FileSystem {
             return 0;
         }
 
-        return records[index].getSecret(outputBuffer);
+        return records[index].getSecret(outputBuffer, outputOffset);
     }
 
     /**
@@ -167,22 +168,21 @@ public class FileSystem {
      * */
     public short getAllNames(byte[] outputBuffer) throws InvalidArgumentException, StorageException {
         if (outputBuffer.length < RECORDS_MAX_NUMBER * NAME_MAX_LEN) {
-            throw new InvalidArgumentException("Output buffer should have maximal possible length.");
+            throw new InvalidArgumentException();
         }
         short offset = 0;
-        for (int index = 0; index < RECORDS_MAX_NUMBER; index++) {
+        for (short index = 0; index < RECORDS_MAX_NUMBER; index++) {
             if (records[index].isEmpty() == 1)
                 continue;
-            byte len = records[index].getName(tempArray);
+            byte len = records[index].getName(outputBuffer, (short) (offset + 1));
             outputBuffer[offset] = len;
-            Util.arrayCopyNonAtomic(this.tempArray, (short) 0, outputBuffer, (short) (offset + 1), len);
             offset += 1 + len;
         }
         return offset;
     }
 
     public void eraseData() throws StorageException {
-        for (int i = 0; i < RECORDS_MAX_NUMBER; i++) {
+        for (short i = 0; i < RECORDS_MAX_NUMBER; i++) {
             this.records[i].eraseRecord();
         }
     }

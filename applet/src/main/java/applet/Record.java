@@ -2,16 +2,15 @@ package applet;
 
 import javacard.framework.JCSystem;
 import javacard.framework.Util;
-import javacard.security.Checksum;
-import javacard.security.HMACKey;
-import javacard.security.KeyBuilder;
+import javacard.security.*;
 
 import static applet.CardSmartApplet.*;
 
 public class Record {
     private final byte[] name;
     private byte nameLength; // 4-10 bytes
-    private final HMACKey secret; // length: max 64 bytes
+    private final AESKey secret;
+    private byte secretLength; // max 32 bytes
     private final Checksum checksum;
     private final byte[] crc;
     private final byte[] tempArray;
@@ -26,9 +25,12 @@ public class Record {
         this.nameLength = 0;
 
         /* Prepare empty secret */
-        byte[] initSecret = JCSystem.makeTransientByteArray((short) 64, JCSystem.CLEAR_ON_DESELECT);
-        this.secret = (HMACKey) KeyBuilder.buildKey(KeyBuilder.TYPE_HMAC, KeyBuilder.LENGTH_HMAC_SHA_256_BLOCK_64, false);
-        this.secret.setKey(initSecret, (short) 0, SECRET_MAX_LEN);
+        byte[] initSecret = JCSystem.makeTransientByteArray(SECRET_MAX_LEN, JCSystem.CLEAR_ON_DESELECT);
+        Util.arrayFillNonAtomic(initSecret, (short)0, SECRET_MAX_LEN, (byte)0);
+
+        this.secret = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_256, false);
+        this.secret.setKey(initSecret, (short) 0);
+        this.secretLength = 0;
 
         /* Initialize checksum */
         this.checksum = Checksum.getInstance(Checksum.ALG_ISO3309_CRC32, false);
@@ -47,10 +49,10 @@ public class Record {
      * */
     private void setName(byte[] buffer, short nameOffset, byte nameLength) throws InvalidArgumentException {
         if (nameLength == 0) {
-            throw new InvalidArgumentException("Name cannot be empty.");
+            throw new InvalidArgumentException();
         }
         if (nameLength < NAME_MIN_LEN || nameLength > NAME_MAX_LEN) {
-            throw new InvalidArgumentException("Wrong length of the name.");
+            throw new InvalidArgumentException();
         }
         Util.arrayCopyNonAtomic(buffer, nameOffset, this.name, (byte) 0, nameLength);
         this.nameLength = nameLength;
@@ -64,14 +66,14 @@ public class Record {
      * @throw StorageException
      * @return length of the name
      * */
-    public byte getName(byte[] outputBuffer) throws InvalidArgumentException, StorageException {
+    public byte getName(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, StorageException {
         if (outputBuffer.length < this.nameLength) {
-            throw new InvalidArgumentException("Buffer too small.");
+            throw new InvalidArgumentException();
         }
         try {
-            Util.arrayCopyNonAtomic(name, (short) 0, outputBuffer, (byte) 0, this.nameLength);
+            Util.arrayCopyNonAtomic(name, (short) 0, outputBuffer, outputOffset, this.nameLength);
         } catch (Exception e) {
-            throw new StorageException("Cannot copy secret name.");
+            throw new StorageException();
         }
 
         return this.nameLength;
@@ -87,14 +89,16 @@ public class Record {
      * @throw StorageException
      * */
     private void setSecret(byte[] buffer, short secretOffset, byte secretLength) throws InvalidArgumentException, StorageException {
-        if (secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN) {
-            throw new InvalidArgumentException("Wrong length of the secret.");
+        if (secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN || buffer.length < secretOffset + SECRET_MAX_LEN) {
+            throw new InvalidArgumentException();
         }
         try {
+            Util.arrayFillNonAtomic(buffer, (short)(secretOffset + secretLength), (short)(SECRET_MAX_LEN - secretLength), (byte)0);
             this.secret.clearKey();
-            this.secret.setKey(buffer, secretOffset, secretLength);
+            this.secret.setKey(buffer, secretOffset);
+            this.secretLength = secretLength;
         } catch (Exception e) {
-            throw new StorageException("Can not clear key");
+            throw new StorageException();
         }
     }
 
@@ -107,21 +111,21 @@ public class Record {
      * @throw StorageException
      * @return length of concatenated names and their lengths
      * */
-    public short getSecret(byte[] outputBuffer) throws InvalidArgumentException, ConsistencyException {
-        if (outputBuffer.length < SECRET_MIN_LEN || outputBuffer.length > SECRET_MAX_LEN) {
-            throw new InvalidArgumentException("Wrong length of the buffer for secret.");
+    public short getSecret(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, ConsistencyException {
+        if (outputBuffer.length < SECRET_MIN_LEN || outputBuffer.length < outputOffset + SECRET_MAX_LEN) {
+            throw new InvalidArgumentException();
         }
 
         /* Get value of secret */
-        byte secretLength = this.secret.getKey(outputBuffer, (short) 0);
+        this.secret.getKey(outputBuffer, outputOffset);
 
         /* Compute checksum of secret */
-        checksum.doFinal(outputBuffer, (short) 0, secretLength, tempArray, (short) 0);
+        checksum.doFinal(outputBuffer, outputOffset, this.secretLength, tempArray, (short) 0);
         if (Util.arrayCompare(crc, (short) 0, tempArray, (short) 0, CRC_LEN) != 0) {
-            throw new ConsistencyException("CRC does not match");
+            throw new ConsistencyException();
         }
 
-        return secretLength;
+        return this.secretLength;
     }
 
     /**
@@ -151,7 +155,7 @@ public class Record {
         try {
             this.secret.clearKey();
         } catch (Exception e) {
-            throw new StorageException("Can not clear key");
+            throw new StorageException();
         }
         nameLength = 0;
         Util.arrayFillNonAtomic(name, (short) 0, (short) name.length, (byte) 0);

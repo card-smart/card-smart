@@ -130,10 +130,14 @@ class FileSystemTest {
         Assertions.assertEquals(fs.getNumberOfRecords(), 1);
 
         try {
-            byte[] buffer2 = new byte[5];
-            short len = fs.getSecretByName(name, (byte)name.length, (short) 0, buffer2);
-            Assertions.assertEquals(len, secret.length);
-            Assertions.assertArrayEquals(secret, buffer2);
+            byte[] buffer2 = new byte[32];
+            short len = fs.getSecretByName(name, (byte)name.length, (short) 0, buffer2, (short) 0);
+            Assertions.assertEquals(len, 5);
+            byte i = 0;
+            for (byte s : secret) {
+                Assertions.assertEquals(s, buffer2[i]);
+                i++;
+            }
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
         }

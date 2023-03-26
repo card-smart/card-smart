@@ -49,7 +49,7 @@ public class CardSmartBasicTest extends BaseTest {
     /* Unknown INS byte */
     @Test
     public void unknownINS() throws Exception {
-        CommandAPDU cmd = new CommandAPDU(0xC0, 0x10, 0x00, 0x00);
+        CommandAPDU cmd = new CommandAPDU(0xB0, 0x10, 0x00, 0x00);
         final ResponseAPDU responseAPDU = connect().transmit(cmd);
         Assert.assertNotNull(responseAPDU);
         Assert.assertEquals(0x6C01, responseAPDU.getSW());

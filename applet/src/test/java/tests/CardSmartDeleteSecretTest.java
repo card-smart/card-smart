@@ -7,9 +7,8 @@ import org.junit.jupiter.api.*;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 
-public class CardSmartStoreSecretTest extends BaseTest {
-    private static final byte PIN_MAX_TRIES = (byte)5;
-    public CardSmartStoreSecretTest() {
+public class CardSmartDeleteSecretTest extends BaseTest {
+    public CardSmartDeleteSecretTest() {
         // Change card type here if you want to use physical card
         setCardType(CardType.JCARDSIMLOCAL);
     }
@@ -30,9 +29,9 @@ public class CardSmartStoreSecretTest extends BaseTest {
     public void tearDownMethod() throws Exception {
     }
 
-    /* Store secret */
+    /* Delete secret */
     @Test
-    public void storeSecret_4bytes() throws Exception {
+    public void deleteSecretFromCard() throws Exception {
         CardManager card = connect();
         /* Verify on default PIN */
         byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
@@ -47,10 +46,25 @@ public class CardSmartStoreSecretTest extends BaseTest {
         responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
+
+        /* delete secret from card */
+        byte[] name = {4, 0x31, 0x32, 0x33, 0x34};
+        cmd = new CommandAPDU(0xB0, 0x26, 0x00, 0x00, name);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+
+        /* Get names on card */
+        cmd = new CommandAPDU(0xB0, 0x20, 0x00, 0x00);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        Assertions.assertEquals(0, responseAPDU.getData().length);
     }
 
+    /* Delete secret, no authentication */
     @Test
-    public void storeSecret_shortName() throws Exception {
+    public void deleteSecretFromCard_noAuthentication() throws Exception {
         CardManager card = connect();
         /* Verify on default PIN */
         byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
@@ -60,10 +74,24 @@ public class CardSmartStoreSecretTest extends BaseTest {
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
 
         /* Store secret on card */
-        byte[] secretData = {3, 0x31, 0x32, 0x33, 4, 1, 2, 3, 4};
+        byte[] secretData = {4, 0x31, 0x32, 0x33, 0x34, 4, 1, 2, 3, 4};
         cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData);
         responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
-        Assertions.assertEquals(0x6B06, responseAPDU.getSW());
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+
+        /* Verify wrong PIN to log out */
+        byte[] data2 = {0x3, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
+        cmd = new CommandAPDU(0xB0, 0x22, 0x00, 0x00, data2);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x6B01, responseAPDU.getSW());
+
+        /* delete secret from card */
+        byte[] name = {4, 0x31, 0x32, 0x33, 0x34};
+        cmd = new CommandAPDU(0xB0, 0x26, 0x00, 0x00, name);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x6B01, responseAPDU.getSW());
     }
 }
