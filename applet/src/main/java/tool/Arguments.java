@@ -20,6 +20,9 @@ public class Arguments {
     public Arguments(CommandLine cmd) {
         this.cmd = cmd;
 
+        if (cmd.hasOption('l')) {
+            loginNeeded = false;
+        }
         if (cmd.hasOption('p')) {
             PIN = cmd.getOptionValue('p').getBytes();
         }
