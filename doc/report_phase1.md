@@ -61,19 +61,36 @@ storage and set a new pairing secret or by the option to use the PIN to set a ne
 
 ### Tool
 We decided to use library apache.commons.cli for parsing the program arguments
-and commands. They can be passed to the tool in two ways:
-- on the same line as the tool is called, e.g., ./card-smart --list
-- or in the shell after the tool is run, which creates a `smartie` prompt that
-will take arguments until the user types in `quit`, e.g., ./card-smart
+and commands. The class CommandParser implements the CommandLineParser from
+this library while using the Options() class.
+
+The arguments can be passed to the tool in two ways:
+On the same line as the tool is called, e.g.,
+
+    ./card-smart --list
+
+Or in the shell after the tool is run, which creates a `smartie` prompt that
+will take arguments until the user types in `quit`, e.g.,
+
+    ./card-smart
+
     smartie$ --list
+
     smartie$ quit
+
 This was created so that users don't have to call the tool with every
 instruction they want to pass to the smart card and it also saves resources as
 the needed initialization of the tool is done just once.
 
 After parsing, we perform validation of options and arguments with all the
-necessary type conversion or padding to byte arrays. After that, we build APDUs
-with the parsed data and send them for processing to the card applet.
+necessary type conversion or padding to byte arrays. All parameters are saved
+in one class Arguments which is passed to APDUs building functions.
+
+The APDU functions take parameter that are only necessary for specific
+operations and it does not matter if the rest of the class fields are null.
+This was created so that future conversion to function callbacks would be
+smooth.  Each function is responsible for building the APDU, sending it for
+processing to the card and handling the card response.
 
 In the next phase, we would like to perfect the output of the card responses and
 overall usability of the tool - better exception handling and more descriptive
