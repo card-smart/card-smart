@@ -25,9 +25,13 @@ When the applet is loaded onto the card, the applet is uninitialized, the PIN is
 and the applet allows all basic functionality to function.
 
 To use the secure channel, the applet needs to be initialized. During the initialization of the applet,
-we set a new asymmetric key pair and the so-called pairing secret, which is further used when opening the secure channel.
+we set a new asymmetric key pair and the so-called pairing secret, which is further used when opening the secure channel and deriving the secret key for encryption.
+The pairing secret is generated outside of the applet and supplied via encrypted APDU.
 The initialization operation must be performed in a secure environment.
 At this stage, we cannot yet ensure that the tool communicates with the real card and not with the attacker.
+After the initialization, the pairing secret is used for deriving the secret key and thus authentication 
+of both parties (without having the pairing secret, the party cannot create right secret key and then MAC validation and encryption
+fails).
 
 After initializing the applet, a new secure channel must be created before each series of operations.
 The main goal is to create a shared symmetric key. To achieve this, public asymmetric keys are exchanged between
