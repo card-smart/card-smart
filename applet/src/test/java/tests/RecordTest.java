@@ -24,8 +24,9 @@ class RecordTest {
 
     @Test
     public void initRecord()  {
+        // setSecret stores 32 bytes
         byte[] data = {4 /* name len */, 1, 2, 3, 4,
-                10 /* secret len */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+                10 /* secret len */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
         Record record = new Record();
         try {
@@ -35,7 +36,7 @@ class RecordTest {
         }
         Assertions.assertEquals(0, record.isEmpty());
 
-        byte[] buffer = new byte[10];
+        byte[] buffer = new byte[32];
         byte[] nameBuffer = new byte[4];
         try {
             short secretLen = record.getSecret(buffer);
@@ -43,7 +44,7 @@ class RecordTest {
         } catch (Exception e) {
             Assertions.fail("Get secret failed");
         }
-        Assertions.assertArrayEquals(buffer, new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        Assertions.assertArrayEquals(buffer, new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
         try {
             byte nameLen = record.getName(nameBuffer);
@@ -72,7 +73,7 @@ class RecordTest {
             record.eraseRecord();
         } catch (Exception e) {
             Assertions.fail("Erase failed");
-        }
+        } 
 
         byte[] buffer = new byte[10];
         try {
