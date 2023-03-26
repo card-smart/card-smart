@@ -112,7 +112,7 @@ public class Record {
      * @return length of concatenated names and their lengths
      * */
     public short getSecret(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, ConsistencyException {
-        if (outputBuffer.length < SECRET_MIN_LEN || outputBuffer.length > SECRET_MAX_LEN) {
+        if (outputBuffer.length < SECRET_MIN_LEN) {
             throw new InvalidArgumentException();
         }
 
