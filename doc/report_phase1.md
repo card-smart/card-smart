@@ -73,9 +73,7 @@ Or in the shell after the tool is run, which creates a `smartie` prompt that
 will take arguments until the user types in `quit`, e.g.,
 
     ./card-smart
-
     smartie$ --list
-
     smartie$ quit
 
 This was created so that users don't have to call the tool with every
