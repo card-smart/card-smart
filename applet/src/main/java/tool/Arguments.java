@@ -43,8 +43,8 @@ public class Arguments {
         }
     }
 
-    public byte[] padPIN(byte[] PIN) {
-        return Arrays.copyOf(PIN, 10);
+    public byte[] padBytes(byte[] PIN, int len) {
+        return Arrays.copyOf(PIN, len);
     }
 
     public boolean validateInput() throws IOException {
@@ -64,21 +64,23 @@ public class Arguments {
         if (PIN != null) {
             if (PIN.length > 10)
                 return false;
-            PIN = padPIN(PIN);
+            PIN = padBytes(PIN, 10);
         }
 
         if (newPIN != null) {
             if (newPIN.length > 10)
                 return false;
-            newPIN = padPIN(newPIN);
+            newPIN = padBytes(newPIN, 10);
         }
 
         if (secretName != null && secretName.length > 10) {
             return false;
         }
 
-        if (secretValue != null && secretValue.length > 64) {
-            return false;
+        if (secretValue != null) {
+            if (secretValue.length > 32)
+                return false;
+            secretValue = padBytes(secretValue, 32);
         }
 
         return true;

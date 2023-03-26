@@ -188,7 +188,7 @@ public class Main {
     private static void cardStoreSecret(CardManager cardMngr, Arguments args) throws Exception {
         byte[] r = Arguments.concat(new byte[]{(byte) args.secretName.length}, args.secretName,
                 new byte[]{(byte) args.secretValue.length}, args.secretValue);
-        byte[] data = Arrays.copyOf(r, 76);
+        byte[] data = Arrays.copyOf(r, 44);
 
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x25, data));
         System.out.println(response);
