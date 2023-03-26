@@ -110,7 +110,7 @@ public class CardSmartApplet extends Applet {
         this.fileSystem = new FileSystem();
 
         /* Create instance of SecureChannel class */
-        secureChannel = new SecureChannel();
+        //secureChannel = new SecureChannel();
 
         register();
     }
