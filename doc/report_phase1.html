@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>&lbrack;PV204&rbrack; Project report&comma; phase II&period;</title>
+        <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+        
+    </head>
+    <body class="vscode-body vscode-light">
+        <h1 id="pv204-project-report-phase-ii">[PV204] Project report, phase II.</h1>
+<p>Veronika Hanulíková (492760), Kristína Hanicová (492779), Lubomír Hrbáček (493077)</p>
+<h2 id="project-design">Project design</h2>
+<h3 id="javacard-applet">JavaCard Applet</h3>
+<p>The applet serves as a repository for secret values accessed by their name.
+We use a PIN to authenticate the user.</p>
+<p>After the applet is loaded onto the card, the PIN is set to the default value.
+The maximum length of a PIN is 10 bytes; the current implementation accepts PINs of this length
+(and the task of the applet tool is to align the shorter PIN in this way). The PIN can then be changed.</p>
+<h4 id="operations">Operations</h4>
+<p>We divide basic card operations into those that can be performed without user authentication
+and those for which authentication is required. Getting all the secret names from the applet
+and getting the remaining number of attempts to enter the PIN are among the operations without authentication.
+Creating a new secret, retrieving the contents of an existing secret, deleting a secret, or changing a PIN requires getting
+the card into a so-called authenticated state. This is achieved by sending a PIN verification instruction to the card and the PIN in question.</p>
+<p>A detailed description of how the applet works can be found in the
+applet documentation (<a href="https://github.com/card-smart/card-smart/blob/main/doc/Applet-Specification.html">https://github.com/card-smart/card-smart/blob/main/doc/Applet-Specification.md</a>).</p>
+<h4 id="secure-channel">Secure channel</h4>
+<p>For a secure implementation of the secure channel, we decided to use two more states on the card - initialized and uninitialized.
+When the applet is loaded onto the card, the applet is uninitialized, the PIN is initially set to default,
+and the applet allows all basic functionality to function.</p>
+<p>To use the secure channel, the applet needs to be initialized. During the initialization of the applet,
+we set a new asymmetric key pair and the so-called pairing secret, which is further used when opening the secure channel and deriving the secret key for encryption.
+The pairing secret is generated outside of the applet and supplied via encrypted APDU.
+The initialization operation must be performed in a secure environment.
+At this stage, we cannot yet ensure that the tool communicates with the real card and not with the attacker.
+After the initialization, the pairing secret is used for deriving the secret key and thus authentication
+of both parties (without having the pairing secret, the party cannot create right secret key and then MAC validation and encryption
+fails).</p>
+<p>After initializing the applet, a new secure channel must be created before each series of operations.
+The main goal is to create a shared symmetric key. To achieve this, public asymmetric keys are exchanged between
+the card and the communicating tool; each party then derives the secret using the ECDH algorithm and uses hashing
+to create a symmetric key from the pairing secret, salt and the derived secret. One of these keys is used to encrypt
+the communication; the other is used to compute the MAC tag to ensure integrity.</p>
+<p>The applet itself then handles the decryption of the incoming APDU and MAC tag verification and encryption
+of the outgoing response. We use the incoming MAC tag values from the other side as the IV for encryption.
+If the MAC tag authentication fails while processing the incoming APDU, the secure channel is closed, and the current symmetric keys are erased.</p>
+<p>A detailed description of secure channel can be found in the
+secure channel documentation (<a href="https://github.com/card-smart/card-smart/blob/main/doc/Secure-Channel.html">https://github.com/card-smart/card-smart/blob/main/doc/Secure-Channel.md</a>).
+The inspiration for secure channel workflow is from Keycard project (<a href="https://github.com/status-im/status-keycard">https://github.com/status-im/status-keycard</a>).</p>
+<h4 id="encountered-problems">Encountered problems</h4>
+<p>The first problem we encountered was putting the applet safely into the initialized state.
+Although we were inspired by the creation of a secure channel in other open-source applets, unfortunately,
+we could not find a way to provide mutual authentication during initialization when the applet and the tool do not share any secrets for now.</p>
+<p>Since the card offers only a limited amount of memory, we decided to limit the maximum size of stored secrets.
+To ensure security, we first used the <code>HMACKey</code> object for storage, which allows up to 64 bytes to be stored.
+However, this object was not supported by the card, so we had to replace it with an <code>AESKey</code> object which stores up to 32 bytes.</p>
+<p>For now, the pairing secret cannot be changed in any way after the applet is initialized.
+We would like to solve this problem by either using the PIN to reinitialize the applet and clear the
+storage and set a new pairing secret or by the option to use the PIN to set a new pairing secret.</p>
+<h3 id="tool">Tool</h3>
+<p>We decided to use library apache.commons.cli for parsing the program arguments
+and commands. The class CommandParser implements the CommandLineParser from
+this library while using the Options() class.</p>
+<p>The arguments can be passed to the tool in two ways:
+On the same line as the tool is called, e.g.,</p>
+<pre><code>./card-smart --list
+</code></pre>
+<p>Or in the shell after the tool is run, which creates a <code>smartie</code> prompt that
+will take arguments until the user types in <code>quit</code>, e.g.,</p>
+<pre><code>./card-smart
+smartie$ --list
+smartie$ quit
+</code></pre>
+<p>This was created so that users don't have to call the tool with every
+instruction they want to pass to the smart card and it also saves resources as
+the needed initialization of the tool is done just once.</p>
+<p>After parsing, we perform validation of options and arguments with all the
+necessary type conversion or padding to byte arrays. All parameters are saved
+in one class Arguments which is passed to APDUs building functions.</p>
+<p>The APDU functions take parameter that are only necessary for specific
+operations and it does not matter if the rest of the class fields are null.
+This was created so that future conversion to function callbacks would be
+smooth.  Each function is responsible for building the APDU, sending it for
+processing to the card and handling the card response.</p>
+<p>In the next phase, we would like to perfect the output of the card responses and
+overall usability of the tool - better exception handling and more descriptive
+error prints.</p>
+<h4 id="secure-channel-1">Secure channel</h4>
+<p>The tool will be used both for basic functionality in the uninitialized state of the applet and after its initialization.</p>
+<p>During the pairing process, the tool will generate an asymmetric key and a pairing secret, which will then be encrypted and
+transferred to the card. Once a shared pairing secret is created, this secret will need to be entered each time a secure channel
+is created in order to generate a shared symmetric key for data encryption and MAC tag calculation.</p>
+<h2 id="technologies">Technologies</h2>
+<h3 id="javacard-api">JavaCard API</h3>
+<p>We use the JavaCard library to implement cryptographic operations and store objects securely in the applet.</p>
+<p>PIN storage, subsequent verification and changes of the PIN in applet are implemented via <code>OwnerPIN</code> object.
+As the storage of the secret value itself we do not use only an array of bytes stored in persistent memory,
+but an <code>AESKey</code> object, whose implementation should be more secure.</p>
+<p>Implementing a secure channel requires multiple cryptographic operations, including ECDH, hashing,
+MAC tag calculation, and encryption along with decryption. We use the <code>javacard.security</code> and <code>javacard.crypto</code>
+libraries for these purposes.</p>
+<h3 id="gradle">Gradle</h3>
+<p>We use <a href="https://github.com/ph4r05/javacard-gradle-template">Javacard Gradle Template</a> as the skeleton for our project.
+This template based on Gradle tasks provides, among other things:</p>
+<ul>
+<li>building the entire project</li>
+<li>building the applet into CAP file via Ant with option to choose various JC-SDKS</li>
+<li>installation and deletion of the built CAP file into the Javacard smartcard via GlobalPlatformPro</li>
+<li>together with the IntelliJ IDE running tests in united format and displaying their results in web browser</li>
+</ul>
+<h3 id="cardtools-package">CardTools package</h3>
+<p>We use this package (from Petr Svenda and others), mainly CardManager class, to connect the tool to the Javacard smartcard.
+We got it from <a href="https://github.com/crocs-muni/javacard-gradle-template-edu/tree/master/applet/src/test/java/cardTools">JC Gradle Template Edu</a>.
+It provides clean functions that communicates with Java API for communication with connected cards and readers.</p>
+<h2 id="current-progress">Current progress</h2>
+<ul>
+<li>Applet is able to work with PIN, store, retrieve and delete secrets
+<ul>
+<li>After five attempts to use the wrong PIN, the storage is reset</li>
+<li>The PIN is sent to the card as 10 bytes (will probably be changed to a range of 4 - 10 bytes)</li>
+<li>Basic tests for functionality without secure channel</li>
+</ul>
+</li>
+<li>Applet with basic functionality can be uploaded to the card</li>
+<li>Tool processes arguments for basic applet functionality (without initialization)</li>
+<li>Tool works for basic functionality of the applet - working with PIN, saving, retrieving and deleting secrets</li>
+</ul>
+
+        <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
+        
+    </body>
+    </html>

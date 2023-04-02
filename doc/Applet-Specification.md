@@ -172,29 +172,29 @@ for (short i = 0; i < myObjects.length; i++) {
 | DATA | EC public key (LV encoded) + IV + encrypted payload |
 | le   | ignored                                             |
 
-| RES      | Data field     | Info                                                                        |
-|----------|----------------|-----------------------------------------------------------------------------|
-| `0x9000` | EC public key  |                                                                             |
-| `0x6B00` | none           | error                                                                       |
-| `0x6B01` | none           | when trying to initialize already initialized applet without authentication |
-| `0x6B03` | none           | PIN policy not satisfied                                                    |
-| `0x6A03` | none           | ECDH failed                                                                 |
-| `0x6A04` | none           | Decryption failed                                                           |
+| RES      | Data field | Info                                                                        |
+|----------|------------|-----------------------------------------------------------------------------|
+| `0x9000` | none       |                                                                             |
+| `0x6B00` | none       | error                                                                       |
+| `0x6B01` | none       | when trying to initialize already initialized applet without authentication |
+| `0x6B03` | none       | PIN policy not satisfied                                                    |
+| `0x6A03` | none       | ECDH failed                                                                 |
+| `0x6A04` | none       | Decryption failed                                                           |
 
 #### Open Secure Channel
 * works only in initialized mode
 | APDU | Values                             |
 | ---- | ---------------------------------- |
 | CLA  | `0xC0`                             |
-| INS  | `0x41`                             |
+| INS  | `0x42`                             |
 | P0   | `0x00`                             |
 | P1   | `0x00`                             |
-| lc   | length of app public key and nonce |
-| DATA | app public key and nonce           |
+| lc   | length of app public key           |
+| DATA | app public key                     |
 
 | RES      | Data field  | Info                   |
 |----------|-------------|------------------------|
-| `0x9000` |             | success                |
+| `0x9000` | `salt \ IV` | success                |
 | `0x6A03` |             | applet not initialized |
 
 #### Close Secure Channel
