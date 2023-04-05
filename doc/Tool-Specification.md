@@ -15,7 +15,8 @@
     PrivateKey privateKey = keyPair.getPrivate();
     ```
 3. <span style="color:brown">tools sends APDU with command `Get Card EC Public Key`</span>
-   * APDU: `0xC0 | 0x40 | 0x00 | 0x00`
+   * APDU: `0xB0 | 0x40 | 0x00 | 0x00`
+
 4. <span style="color:green">card responds</span>
    * RES: `0x90 0x00` (success), DATA: `0x04 | point [64 B]`
      * point represents public key
