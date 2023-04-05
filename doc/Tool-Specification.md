@@ -57,7 +57,8 @@
    * RES: `0x90 0x00` (success), DATA: `0x04 | point [64 B]`
      * set as `cardPublicKey`
 4. <span style="color:brown">tool sends APDU with command `Open Secure Channel`</span>
-   * APDU: `0xC0 | 0x42 | 0x00 | 0x00 | 0x41 | uncompressed point [65 B]`
+   * APDU: `0xB0 | 0x42 | 0x00 | 0x00 | 0x41 | uncompressed point [65 B]`
+
    * public key (uncompressed point) has the same format as public key sent by card (bytes from `getW()` method)
 5. <span style="color:green">card responds</span>
    * RES: `0x90 0x00` (success), DATA: `salt [32 B] | IV [16 B]` in plaintext
