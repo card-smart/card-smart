@@ -185,7 +185,8 @@ for (short i = 0; i < myObjects.length; i++) {
 * works only in initialized mode
 | APDU | Values                             |
 | ---- | ---------------------------------- |
-| CLA  | `0xC0`                             |
+| CLA  | `0xB0`                             |
+
 | INS  | `0x42`                             |
 | P0   | `0x00`                             |
 | P1   | `0x00`                             |
