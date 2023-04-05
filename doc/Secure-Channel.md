@@ -57,13 +57,13 @@
      * hash = SHA512(derivedSecret | pairingSecret | salt) {SecureChannel:`openSecureChannel`}
      * encryptionKey = hash[0:32] {SecureChannel:`openSecureChannel`}
      * macKey = hash[32:64] {SecureChannel:`openSecureChannel`}
-  5. card sends **salt** to tool
+  5. card sends **salt** and **IV** to tool in plaintext
   6. _tool_ creates **secrets**
      * derivedSecret = ECDH(tool.privatekey, card.publicKey)
      * hash = SHA512(derivedSecret | pairingSecret | salt)
      * encryptionKey = hash[0:32]
      * macKey = hash[32:64]
-  => both card and tool have symmetric key for AES encryption and MAC tag
+  => both card and tool have symmetric key for AES encryption and MAC tag, IV is used by tool as first IV in encryption
 
 ### APDU and responses on the **card**'s site
 #### Encryption of response - {SecureChannel:`encryptResponse`}

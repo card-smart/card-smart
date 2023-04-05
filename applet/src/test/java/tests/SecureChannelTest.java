@@ -6,6 +6,7 @@ import org.junit.jupiter.api.*;
 
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
+import java.util.Arrays;
 
 public class SecureChannelTest extends BaseTest {
 
@@ -31,7 +32,6 @@ public class SecureChannelTest extends BaseTest {
     }
 
     /* Get public key of card */
-    /*
     @Test
     public void getPublicKey() throws Exception {
         CardManager card = connect();
@@ -43,6 +43,6 @@ public class SecureChannelTest extends BaseTest {
 
         ResponseAPDU secondResponseAPDU = card.transmit(cmd);
         Assertions.assertArrayEquals(responseAPDU.getBytes(), secondResponseAPDU.getBytes());
+        Assertions.assertEquals(65, responseAPDU.getData().length);
     }
-    */
 }

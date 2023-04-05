@@ -245,7 +245,7 @@ public class SecureChannel {
         }
         // 4. compute MAC of the whole encrypted part
         computeMAC(responseBuffer, encryptedLength, responseOffset);
-        // 5. store MAC tag as IV for next decryption of response
+        // 5. store MAC tag as IV for next decryption of APDU
         short macOffset = (short) (responseOffset + responseLength);
         Util.arrayCopyNonAtomic(responseBuffer, macOffset, iv, (short) 0, AES_BLOCK_SIZE);
         return (short) (encryptedLength + MAC_SIZE);
