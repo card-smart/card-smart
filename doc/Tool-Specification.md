@@ -51,7 +51,8 @@
 ### Create secure channel
 1. <span style="color:brown">tool checks that `path` is valid and extracts `pairingSecret` [32 B]</span>
 2. <span style="color:brown">tools sends APDU with command `Get Card EC Public Key`</span>
-   * APDU: `0xC0 | 0x40 | 0x00 | 0x00`
+   * APDU: `0xB0 | 0x40 | 0x00 | 0x00`
+
 3. <span style="color:green">card responds</span>
    * RES: `0x90 0x00` (success), DATA: `0x04 | point [64 B]`
      * set as `cardPublicKey`
