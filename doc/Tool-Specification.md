@@ -73,7 +73,8 @@
      * last `salt`
    * `hash` is split into 2 keys
      * `encryptionKey = hash[0:32]` (first 32 B)
-     * `macKey = hash[0:32]` (last 32 B)
+     * `macKey = hash[32:64]` (last 32 B)
+
 
 ### First APDU after opening the secure channel (i. e. PIN Verify)
 1. <span style="color:brown">tool formats `PIN`</span>
