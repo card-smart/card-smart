@@ -121,7 +121,7 @@ public class SecureChannel {
                     (short) ((short) (apduBuffer[ISO7816.OFFSET_LC] & 0xff) - payloadOffset + ISO7816.OFFSET_CDATA),
                     apduBuffer, ISO7816.OFFSET_CDATA);
         } catch (Exception e) {
-            ISOException.throwIt(RES_ERR_DECRYPT);
+            ISOException.throwIt(RES_ERR_DECRYPTION);
         }
     }
 

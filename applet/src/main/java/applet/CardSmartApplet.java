@@ -42,11 +42,12 @@ public class CardSmartApplet extends Applet {
     protected static final short RES_ERR_SECURE_CHANNEL = (short)0x6A00;
     protected static final short RES_ERR_DECRYPTION = (short)0x6A01;
     protected static final short RES_ERR_MAC = (short)0x6A02;
-    protected static final short RES_ERR_UNINITIALIZED = (short)0x6A03;
-    protected static final short RES_ERR_ENCRYPTION = (short)0x6A04;
-    protected static final short RES_ERR_DATA_LENGTH = (short)0x6A04;
     protected static final short RES_ERR_ECDH = (short)0x6A03;
-    protected static final short RES_ERR_DECRYPT = (short)0x6A04;
+    protected static final short RES_ERR_UNINITIALIZED = (short)0x6A04;
+    protected static final short RES_ERR_INITIALIZED = (short)0x6A05;
+    protected static final short RES_ERR_ENCRYPTION = (short)0x6A06;
+    protected static final short RES_ERR_DATA_LENGTH = (short)0x6A07;
+
     /* Operations */
     protected static final short RES_ERR_GENERAL = (short)0x6B00;
     protected static final short RES_ERR_NOT_LOGGED = (short)0x6B01;
@@ -245,10 +246,10 @@ public class CardSmartApplet extends Applet {
                 try {
                     this.resetToDefault();
                 } catch (StorageException e) {
-                    ISOException.throwIt(RES_ERR_GENERAL);
+                    ISOException.throwIt(RES_ERR_STORAGE);
                 }
             } else {
-                ISOException.throwIt(RES_ERR_GENERAL);
+                ISOException.throwIt(RES_ERR_NOT_LOGGED);
             }
         }
 
@@ -338,6 +339,10 @@ public class CardSmartApplet extends Applet {
      */
     void unsecureGetPINTries(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        if (this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_INITIALIZED);
+        }
+
         getPINTries(apduBuffer);
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, (short) 1);
     }
@@ -350,6 +355,10 @@ public class CardSmartApplet extends Applet {
      * @apiNote authentication not required
      */
     void secureGetPINTries(APDU apdu) {
+        if (!this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_UNINITIALIZED);
+        }
+
         byte[] apduBuffer = apdu.getBuffer();
         secureChannel.decryptAPDU(apduBuffer);
         getPINTries(apduBuffer);
@@ -386,6 +395,11 @@ public class CardSmartApplet extends Applet {
     void unsecureVerifyPIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
+
+        if (this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_INITIALIZED);
+        }
+
         short SW = verifyPIN(apduBuffer);
         if (SW == RES_ERR_RESET) {
             try {
@@ -409,6 +423,11 @@ public class CardSmartApplet extends Applet {
     void secureVerifyPIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
+
+        if (!this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_UNINITIALIZED);
+        }
+
         secureChannel.decryptAPDU(apduBuffer);
         short SW = verifyPIN(apduBuffer);
         if (SW == RES_ERR_RESET) {
@@ -429,6 +448,7 @@ public class CardSmartApplet extends Applet {
      */
     short changePIN(byte[] apduBuffer) {
         short dataLength = apduBuffer[ISO7816.OFFSET_LC];
+
         /* Check whether user is authenticated */
         if (!this.getUserAuthenticated()) {
             return RES_ERR_NOT_LOGGED;
@@ -453,6 +473,10 @@ public class CardSmartApplet extends Applet {
     void unsecureChangePIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
+        if (this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_INITIALIZED);
+        }
+
         short SW = changePIN(apduBuffer);
         if (SW != RES_SUCCESS)
             ISOException.throwIt(SW);
@@ -468,6 +492,9 @@ public class CardSmartApplet extends Applet {
     void secureChangePIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
+        if (!this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_UNINITIALIZED);
+        }
         secureChannel.decryptAPDU(apduBuffer);
         short SW = changePIN(apduBuffer);
         secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
@@ -510,6 +537,9 @@ public class CardSmartApplet extends Applet {
     void unsecureStoreSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
+        if (this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_INITIALIZED);
+        }
         short SW = storeSecret(apduBuffer);
         if (SW != RES_SUCCESS)
             ISOException.throwIt(SW);
@@ -525,6 +555,10 @@ public class CardSmartApplet extends Applet {
     void secureStoreSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
+        if (!this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_UNINITIALIZED);
+        }
+
         secureChannel.decryptAPDU(apduBuffer);
         short SW = storeSecret(apduBuffer);
         secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
@@ -561,6 +595,10 @@ public class CardSmartApplet extends Applet {
      */
     void unsecureGetNames(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        if (this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_INITIALIZED);
+        }
+
         short SW = getNames(apduBuffer);
         if (SW != RES_SUCCESS)
             ISOException.throwIt(SW);
@@ -577,6 +615,10 @@ public class CardSmartApplet extends Applet {
      */
     void secureGetNames(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        if (!this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_UNINITIALIZED);
+        }
+
         secureChannel.decryptAPDU(apduBuffer);
         short SW = getNames(apduBuffer);
         if (SW != RES_SUCCESS)
@@ -619,6 +661,9 @@ public class CardSmartApplet extends Applet {
      */
     void unsecureDeleteSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        if (this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_INITIALIZED);
+        }
         short SW = deleteSecret(apduBuffer);
         if (SW != RES_SUCCESS)
             ISOException.throwIt(SW);
@@ -633,6 +678,9 @@ public class CardSmartApplet extends Applet {
      */
     void secureDeleteSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        if (!this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_UNINITIALIZED);
+        }
         secureChannel.decryptAPDU(apduBuffer);
         short SW = deleteSecret(apduBuffer);
         secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
@@ -668,6 +716,9 @@ public class CardSmartApplet extends Applet {
      */
     void unsecureGetSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        if (this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_INITIALIZED);
+        }
         short SW = getSecret(apduBuffer);
         if (SW != RES_SUCCESS)
             ISOException.throwIt(SW);
@@ -683,6 +734,10 @@ public class CardSmartApplet extends Applet {
      */
     void secureGetSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        if (!this.getAppletInitialized()) {
+            ISOException.throwIt(RES_ERR_UNINITIALIZED);
+        }
+
         secureChannel.decryptAPDU(apduBuffer);
         short SW = getSecret(apduBuffer);
         short encryptedLength = secureChannel.encryptResponse(apduBuffer, apduBuffer[ISO7816.OFFSET_LC], ISO7816.OFFSET_CDATA, SW);
