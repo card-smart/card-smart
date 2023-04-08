@@ -9,7 +9,10 @@ public class FileSystem {
     /*
      * FileSystem constants
      */
-    private static final short NAME_MAX_LEN = CardSmartApplet.NAME_MAX_LEN;
+    private static final short NAME_MAX_LEN = Record.NAME_MAX_LEN;
+    private static final short NAME_MIN_LEN = Record.NAME_MIN_LEN;
+    private static final short SECRET_MAX_LEN = Record.SECRET_MAX_LEN;
+    private static final short SECRET_MIN_LEN = Record.SECRET_MIN_LEN;
     private static final byte RECORDS_MAX_NUMBER = (byte) 16;
     private static final short TEMP_ARRAY_LEN = NAME_MAX_LEN;
 
@@ -68,7 +71,8 @@ public class FileSystem {
      * @throw InvalidArgumentException   When name is Null.
      * @throw StorageException When name is empty ("") and length is not 0.
      */
-    private byte getIndexByName(byte[] name, byte nameLength, short nameOffset) throws InvalidArgumentException, StorageException {
+    private byte getIndexByName(byte[] name, byte nameLength, short nameOffset)
+            throws InvalidArgumentException, StorageException {
         for (byte index = 0; index < RECORDS_MAX_NUMBER; index++) {
             if (records[index].isEmpty() == 1)
                 continue;
@@ -92,11 +96,10 @@ public class FileSystem {
      * @throw InvalidArgumentException
      * @throw StorageException
      */
-    public void createRecord(byte[] buffer, byte nameLength, short nameOffset, byte secretLength, short secretOffset) throws StorageException, InvalidArgumentException {
-        if (buffer == null || nameLength <= 0 || secretLength <= 0) {
-            throw new InvalidArgumentException();
-        }
-        if (nameLength < 4 || nameLength > 10 || secretLength > 64) {
+    public void createRecord(byte[] buffer, byte nameLength, short nameOffset, byte secretLength, short secretOffset)
+            throws StorageException, InvalidArgumentException {
+        if (buffer == null || nameLength < NAME_MIN_LEN || nameLength > NAME_MAX_LEN
+                || secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN) {
             throw new InvalidArgumentException();
         }
 
@@ -118,8 +121,9 @@ public class FileSystem {
      * @throw InvalidArgumentException
      * @throw StorageException
      */
-    public void deleteRecord(byte[] buffer, byte nameLength, short nameOffset) throws InvalidArgumentException, StorageException {
-        if (nameLength < 0) {
+    public void deleteRecord(byte[] buffer, byte nameLength, short nameOffset)
+            throws InvalidArgumentException, StorageException {
+        if (nameLength < NAME_MIN_LEN || nameLength > NAME_MAX_LEN) {
             throw new InvalidArgumentException();
         }
 
@@ -144,8 +148,8 @@ public class FileSystem {
      */
     public short getSecretByName(byte[] name, byte nameLength, short nameOffset, byte[] outputBuffer, short outputOffset)
             throws InvalidArgumentException, ConsistencyException, StorageException {
-        if (name == null || nameLength < 0
-                || outputBuffer == null || outputBuffer.length == 0) {
+        if (name == null || nameLength < NAME_MIN_LEN || nameLength > NAME_MAX_LEN
+                || outputBuffer == null || outputBuffer.length < SECRET_MIN_LEN) {
             throw new InvalidArgumentException();
         }
 
@@ -166,7 +170,7 @@ public class FileSystem {
      * @return length of concatenated names and their lengths
      * */
     public short getAllNames(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, StorageException {
-        if (outputBuffer.length < RECORDS_MAX_NUMBER * NAME_MAX_LEN) {
+        if (outputBuffer.length < RECORDS_MAX_NUMBER * NAME_MAX_LEN + RECORDS_MAX_NUMBER) {
             throw new InvalidArgumentException();
         }
         short offset = 0;

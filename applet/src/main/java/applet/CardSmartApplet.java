@@ -68,12 +68,6 @@ public class CardSmartApplet extends Applet {
     private static final byte[] DEFAULT_PIN = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
     protected static final byte PIN_MAX_LEN = (byte)10;
     protected static final byte PIN_MAX_TRIES = (byte)5;
-    /* Name constants */
-    protected static final byte NAME_MIN_LEN = (byte)4;
-    protected static final byte NAME_MAX_LEN = (byte)10;
-    /* Secret' constants */
-    protected static final byte SECRET_MIN_LEN = (byte)2;
-    protected static final byte SECRET_MAX_LEN = (byte)32;
 
     /* Cryptographic instances */
     private final OwnerPIN pin;
@@ -651,11 +645,6 @@ public class CardSmartApplet extends Applet {
      * @apiNote works both by initialized and uninitialized mode
      */
     short getSecret(byte[] apduBuffer) {
-        // 1. check length of the given name
-        if (apduBuffer[ISO7816.OFFSET_LC] < NAME_MIN_LEN
-                || apduBuffer[ISO7816.OFFSET_LC] > NAME_MAX_LEN) {
-            return RES_ERR_NAME_POLICY;
-        }
         try {
             short secretLength = fileSystem.getSecretByName(apduBuffer, apduBuffer[ISO7816.OFFSET_LC],
                     ISO7816.OFFSET_CDATA, apduBuffer, ISO7816.OFFSET_CDATA);
