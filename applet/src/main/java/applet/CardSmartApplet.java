@@ -55,8 +55,8 @@ public class CardSmartApplet extends Applet {
     protected static final short RES_ERR_STORAGE = (short)0x6B04;
     protected static final short RES_ERR_NAME_POLICY = (short)0x6B05;
     protected static final short RES_ERR_SECRET_POLICY = (short)0x6B06;
-    protected static final short RES_ERR_NO_DATA = (short)0x6B07;
-    protected static final short RES_ERR_INPUT_DATA = (short)0x6B08;
+    // protected static final short RES_ERR_NO_DATA = (short)0x6B07;
+    // protected static final short RES_ERR_INPUT_DATA = (short)0x6B08;
     /* Unsupported instructions */
     protected static final short RES_UNSUPPORTED_CLA = (short)0x6C00;
     protected static final short RES_UNSUPPORTED_INS = (short)0x6C01;
@@ -66,7 +66,7 @@ public class CardSmartApplet extends Applet {
      */
     /* PIN constants */
     private static final byte[] DEFAULT_PIN = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
-    protected static final byte PIN_MIN_LEN = (byte)4;
+    //protected static final byte PIN_MIN_LEN = (byte)4;
     protected static final byte PIN_MAX_LEN = (byte)10;
     protected static final byte PIN_MAX_TRIES = (byte)5;
     /* Name constants */
@@ -77,34 +77,29 @@ public class CardSmartApplet extends Applet {
     protected static final byte SECRET_MAX_LEN = (byte)32;
 
     /* Cryptographic instances */
-    private OwnerPIN pin = null;
+    private OwnerPIN pin;
 
     /*
      * Other instances
      */
 
-    FileSystem fileSystem = null;
-    SecureChannel secureChannel = null;
-
-    private static final short TEMP_ARRAY_LEN = (short) 256;
-    //private byte[] tempArray = null;
-    private boolean[] isUserAuthenticated = null;
-    private boolean[] isAppletInitialized = null;
+    FileSystem fileSystem;
+    SecureChannel secureChannel;
+    private final boolean[] isUserAuthenticated;
+    private final boolean[] isAppletInitialized;
 
     public CardSmartApplet(byte[] bArray, short bOffset, byte bLength) {
-
-        /* Create temporary array */
-        //this.tempArray = JCSystem.makeTransientByteArray(TEMP_ARRAY_LEN, JCSystem.CLEAR_ON_DESELECT);
-
         /* Set initial PIN */
         this.pin = new OwnerPIN(PIN_MAX_TRIES, PIN_MAX_LEN); // 5 tries, max 10 digits in pin
         this.pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
 
         /* Create array for user authentication */
         this.isUserAuthenticated = JCSystem.makeTransientBooleanArray((short) 1, JCSystem.CLEAR_ON_DESELECT);
+        this.setUserAuthenticated(false);
 
         /* Create array for denoting the applet is initialized */
         this.isAppletInitialized = new boolean[1];
+        this.setAppletInitialized(false);
 
         /* Initialize filesystem with empty records */
         this.fileSystem = new FileSystem();
@@ -122,7 +117,8 @@ public class CardSmartApplet extends Applet {
 
     @Override
     public boolean select() {
-        // TODO: Clear session data here
+        // log out user by applet selection
+        this.setUserAuthenticated(false);
         return true;
     }
 
@@ -131,7 +127,7 @@ public class CardSmartApplet extends Applet {
         // get the buffer with incoming APDU
         byte[] apduBuffer = apdu.getBuffer();
 
-        // ignore the applet select command dispached to the process
+        // ignore the applet select command dispatched to the process
         if (selectingApplet()) {
             return;
         }
@@ -150,7 +146,7 @@ public class CardSmartApplet extends Applet {
                         this.openSecureChannel(apdu);
                         break;
                     case INS_CLOSE_SC:
-                        this.closeSecureChannel(apdu);
+                        this.closeSecureChannel();
                         break;
                     case INS_PIN_TRIES:
                         this.unsecureGetPINTries(apdu);
@@ -217,6 +213,14 @@ public class CardSmartApplet extends Applet {
     }
 
     /**
+     * Returns true when applet is initialized
+     * @param isInitialized value to be set
+     */
+    private void setAppletInitialized(boolean isInitialized) {
+        this.isAppletInitialized[0] = isInitialized;
+    }
+
+    /**
      * Get public key of card
      * @param apdu apdu command
      * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
@@ -225,7 +229,6 @@ public class CardSmartApplet extends Applet {
      */
     void getPublicKey(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
         // some key should be always generated
         short keyLength = secureChannel.getCardPublicKey(apduBuffer, ISO7816.OFFSET_CDATA);
         apdu.setOutgoingAndSend((short) 0, keyLength);
@@ -265,6 +268,9 @@ public class CardSmartApplet extends Applet {
 
         // 4. set pairingSecret and update current card EC keypair
         secureChannel.initSecureChannel(apduBuffer, (short) (ISO7816.OFFSET_CDATA + PIN_MAX_LEN));
+
+        // 5. set applet into initialized state
+        this.setAppletInitialized(true);
     }
 
     /**
@@ -290,13 +296,12 @@ public class CardSmartApplet extends Applet {
 
     /**
      * Close secure channel for current communication
-     * @param apdu apdu command
      * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
      * @RESPONSE   salt [32 B] | IV [16] B
      * @apiNote authentication not required
      * @apiNote works in initialized state
      */
-    void closeSecureChannel(APDU apdu) {
+    void closeSecureChannel() {
         // 1. if applet is not initialized, throw error
         if (!this.getAppletInitialized()) {
             ISOException.throwIt(RES_ERR_UNINITIALIZED);
@@ -328,9 +333,7 @@ public class CardSmartApplet extends Applet {
      */
     private void getPINTries(byte[] responseBuffer) {
         byte tries = pin.getTriesRemaining();
-        this.fileSystem.tempArray[0] = tries;
-        Util.arrayCopyNonAtomic(this.fileSystem.tempArray, (short) 0, responseBuffer, ISO7816.OFFSET_CDATA, (short) 1);
-
+        responseBuffer[ISO7816.OFFSET_CDATA] = tries;
     }
 
     /**
@@ -370,11 +373,7 @@ public class CardSmartApplet extends Applet {
         if(!this.pin.check(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN)) {
             byte tries = this.pin.getTriesRemaining();
             if (tries == 0) {
-                try {
-                    this.resetToDefault();
-                } catch (StorageException e) {
-                    return RES_ERR_GENERAL;
-                }
+                return RES_ERR_RESET;
             }
             this.setUserAuthenticated(false);
             return RES_ERR_NOT_LOGGED;
@@ -384,7 +383,8 @@ public class CardSmartApplet extends Applet {
     }
 
     /**
-     * Unsecure verify given PIN and set card into authenticated state
+     * Unsecure verify given PIN and set card into authenticated state.
+     * When out of tries, card is reset to uninitialized default state.
      * @param apdu apdu command
      * @APDU       P1 = 0, P2 = 0, L_c = 0x0A, DATA = PIN code
      * @RESPONSE   none
@@ -394,12 +394,20 @@ public class CardSmartApplet extends Applet {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
         short SW = verifyPIN(apduBuffer);
+        if (SW == RES_ERR_RESET) {
+            try {
+                this.resetToDefault();
+            } catch (Exception e) {
+                ISOException.throwIt(RES_ERR_STORAGE);
+            }
+        }
         if (SW != RES_SUCCESS)
             ISOException.throwIt(SW);
     }
 
     /**
-     * Secure verify given PIN and set card into authenticated state
+     * Secure verify given PIN and set card into authenticated state.
+     * When out of tries, card is reset to uninitialized default state.
      * @param apdu apdu command
      * @APDU       P1 = 0, P2 = 0, L_c = 0x20, DATA = encrypted PIN | MAC tag
      * @RESPONSE   encrypted response code | MAC tag
@@ -410,6 +418,13 @@ public class CardSmartApplet extends Applet {
         short dataLength = apdu.setIncomingAndReceive();
         secureChannel.decryptAPDU(apduBuffer);
         short SW = verifyPIN(apduBuffer);
+        if (SW == RES_ERR_RESET) {
+            try {
+                this.hardReset();
+            } catch (Exception e) {
+                SW = RES_ERR_STORAGE;
+            }
+        }
         secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
     }
 
@@ -533,10 +548,9 @@ public class CardSmartApplet extends Applet {
         short namesLength;
         try {
             /* Get all names into the temporary buffer */
-            namesLength = fileSystem.getAllNames(this.fileSystem.tempArray);
+            namesLength = fileSystem.getAllNames(apduBuffer, ISO7816.OFFSET_CDATA);
             /* Copy result into response buffer*/
             apduBuffer[ISO7816.OFFSET_LC] = (byte) namesLength;
-            Util.arrayCopyNonAtomic(fileSystem.tempArray, (short) 0, apduBuffer, ISO7816.OFFSET_CDATA, namesLength);
         } catch (StorageException e) {
             return RES_ERR_STORAGE;
         } catch (InvalidArgumentException e) {
@@ -692,11 +706,10 @@ public class CardSmartApplet extends Applet {
      * It does not influence the initialization state itself
      */
     private void resetToDefault() throws StorageException {
-        //Util.arrayFillNonAtomic(tempArray, (short) 0, (short) TEMP_ARRAY_LEN, (byte) 0);
         eraseSecretData();
         this.pin.reset();
         this.pin.update(DEFAULT_PIN, (short) 0, PIN_MAX_LEN);
-        // TODO: When applet is initialized, set back into uninitialized state
+        this.secureChannel.closeSecureChannel();
     }
 
     /**
@@ -704,5 +717,13 @@ public class CardSmartApplet extends Applet {
      */
     private void eraseSecretData() throws StorageException {
         fileSystem.eraseData();
+    }
+
+    /**
+     * Set card into default uninitialized state
+     */
+    private void hardReset() throws StorageException {
+        this.secureChannel.eraseSecureChannel();
+        this.resetToDefault();
     }
 }

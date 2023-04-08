@@ -3,16 +3,15 @@ package applet;
 import javacard.framework.JCSystem;
 import javacard.framework.Util;
 
-import static applet.CardSmartApplet.NAME_MAX_LEN;
-import static javacard.framework.Util.arrayCompare;
 
 public class FileSystem {
 
     /*
      * FileSystem constants
      */
+    private static final short NAME_MAX_LEN = CardSmartApplet.NAME_MAX_LEN;
     private static final byte RECORDS_MAX_NUMBER = (byte) 16;
-    private static final short TEMP_ARRAY_LEN = (short) 256;
+    private static final short TEMP_ARRAY_LEN = NAME_MAX_LEN;
 
     /*
      * Records store in filesystem
@@ -166,7 +165,7 @@ public class FileSystem {
      * @throw StorageException
      * @return length of concatenated names and their lengths
      * */
-    public short getAllNames(byte[] outputBuffer) throws InvalidArgumentException, StorageException {
+    public short getAllNames(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, StorageException {
         if (outputBuffer.length < RECORDS_MAX_NUMBER * NAME_MAX_LEN) {
             throw new InvalidArgumentException();
         }
@@ -174,8 +173,8 @@ public class FileSystem {
         for (short index = 0; index < RECORDS_MAX_NUMBER; index++) {
             if (records[index].isEmpty() == 1)
                 continue;
-            byte len = records[index].getName(outputBuffer, (short) (offset + 1));
-            outputBuffer[offset] = len;
+            byte len = records[index].getName(outputBuffer, (short) (outputOffset + offset + 1));
+            outputBuffer[(short) (outputOffset + offset)] = len;
             offset += 1 + len;
         }
         return offset;

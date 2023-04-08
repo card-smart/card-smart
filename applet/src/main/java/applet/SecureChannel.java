@@ -254,10 +254,20 @@ public class SecureChannel {
         return (short) (encryptedLength + MAC_SIZE);
     }
 
+    /**
+     * Delete data for current secure channel instance
+     */
     public void closeSecureChannel() {
         encryptionKey.clearKey();
         macKey.clearKey();
-        Util.arrayFillNonAtomic(secret, (short) 0, PAIRING_SECRET_LENGTH, (byte) 0);
         Util.arrayFillNonAtomic(iv, (short) 0, AES_BLOCK_SIZE, (byte) 0);
+    }
+
+    /**
+     * Erase all sensitive secure channel data
+     */
+    public void eraseSecureChannel() {
+        this.closeSecureChannel();
+        Util.arrayFillNonAtomic(secret, (short) 0, PAIRING_SECRET_LENGTH, (byte) 0);
     }
 }
