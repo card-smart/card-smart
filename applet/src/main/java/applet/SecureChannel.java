@@ -58,7 +58,7 @@ public class SecureChannel {
 
         // card EC keypair
         ecKeypair = new KeyPair(KeyPair.ALG_EC_FP, EC_KEY_SIZE);
-        SECP256k1.setCurveParameters(ecKeypair);
+        SECP256r1.setCurveParameters(ecKeypair);
         ecKeypair.genKeyPair();
 
         // persistent pairing secret used for secure channel after card initialization
