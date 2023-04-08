@@ -646,6 +646,9 @@ public class CardSmartApplet extends Applet {
         try {
             short secretLength = fileSystem.getSecretByName(apduBuffer, apduBuffer[ISO7816.OFFSET_LC],
                     ISO7816.OFFSET_CDATA, apduBuffer, ISO7816.OFFSET_CDATA);
+            if (secretLength == 0) {
+                return RES_ERR_STORAGE;
+            }
             apduBuffer[ISO7816.OFFSET_LC] = (byte) secretLength;
         } catch (InvalidArgumentException e) {
             return RES_ERR_NAME_POLICY;
