@@ -22,22 +22,39 @@ public class SecureChannel {
      * Algorithm implementations
      */
     RandomData random;
-    private final KeyAgreement ecdh;
-    private final Signature mac;
+    private KeyAgreement ecdh;
+    private Signature mac;
     MessageDigest sha512;
     Cipher aesCbc;
 
-    private final AESKey encryptionKey;
-    private final AESKey macKey;
-    private final KeyPair ecKeypair;
-    private final byte[] secret;
-    private final byte[] iv;
-    private final byte[] pairingSecret;
+    private AESKey encryptionKey;
+    private AESKey macKey;
+    private KeyPair ecKeypair;
+    private byte[] secret;
+    private byte[] iv;
+    private byte[] pairingSecret;
+
+    private ECPublicKey ecpub;
+    private ECPrivateKey ecpriv;
 
     /*
      * Initialize new secure channel instance, prepare algorithms and generate first card EC keypair
      */
-    public SecureChannel() {
+    public SecureChannel() {}
+
+    /**
+     * Get the card's public key into the output buffer in plain form
+     *
+     * @param buffer the buffer
+     * @param offset the offset in the buffer
+     * @return the length of the public key
+     */
+    public short getCardPublicKey(byte[] buffer, short offset) {
+        ECPublicKey pk = (ECPublicKey) ecKeypair.getPublic();
+        return pk.getW(buffer, offset);
+    }
+
+    public void initSecureChannelObjects() throws StorageException, SecureChannelException, InvalidArgumentException, ConsistencyException {
         random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_PLAIN, false);
         mac = Signature.getInstance(Signature.ALG_AES_MAC_128_NOPAD, false);
@@ -55,23 +72,28 @@ public class SecureChannel {
         iv = JCSystem.makeTransientByteArray(AES_BLOCK_SIZE, JCSystem.CLEAR_ON_DESELECT);
 
         // card EC keypair
-        this.ecKeypair = new KeyPair(KeyPair.ALG_EC_FP, KeyBuilder.LENGTH_EC_FP_256);
-        ecKeypair.genKeyPair();
+        ecpub = (ECPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PUBLIC, KeyBuilder.LENGTH_EC_FP_256, false);
+        ecpriv = (ECPrivateKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PRIVATE, KeyBuilder.LENGTH_EC_FP_256, false);
+
+        this.ecKeypair = new KeyPair(ecpub, ecpriv);
+        //this.ecKeypair = new KeyPair(KeyPair.ALG_EC_FP, KeyBuilder.LENGTH_EC_FP_256);
+
+        try {
+            ecKeypair.genKeyPair();
+        } catch (CryptoException e) {
+            if (e.getReason() == CryptoException.UNINITIALIZED_KEY) {
+                throw new ConsistencyException();
+            }
+            if (e.getReason() == CryptoException.ILLEGAL_VALUE  || e.getReason() == CryptoException.ILLEGAL_USE || e.getReason() == CryptoException.INVALID_INIT || e.getReason() == CryptoException.NO_SUCH_ALGORITHM) {
+                throw new InvalidArgumentException();
+            }
+            throw new StorageException();
+        } catch (Exception e) {
+            throw new SecureChannelException();
+        }
 
         // persistent pairing secret used for secure channel after card initialization
         pairingSecret = new byte[PAIRING_SECRET_LENGTH];
-    }
-
-    /**
-     * Get the card's public key into the output buffer in plain form
-     *
-     * @param buffer the buffer
-     * @param offset the offset in the buffer
-     * @return the length of the public key
-     */
-    public short getCardPublicKey(byte[] buffer, short offset) {
-        ECPublicKey pk = (ECPublicKey) ecKeypair.getPublic();
-        return pk.getW(buffer, offset);
     }
 
     /**
