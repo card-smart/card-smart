@@ -90,7 +90,6 @@ public class CardSmartApplet extends Applet {
     //private byte[] tempArray = null;
     private boolean[] isUserAuthenticated = null;
     private boolean[] isAppletInitialized = null;
-    private boolean isSCObjectInitialized = false;
 
     public CardSmartApplet(byte[] bArray, short bOffset, byte bLength) {
 
@@ -218,20 +217,6 @@ public class CardSmartApplet extends Applet {
     }
 
     /**
-     * Returns true when Secure Channel objects are initialized
-     */
-    private boolean getSCObjectsInitialized() {
-        return this.isSCObjectInitialized;
-    }
-
-    /**
-     * Sets Secure Channel objects initialization
-     */
-    private void setSCObjectsInitialized(boolean value) {
-        this.isSCObjectInitialized = value;
-    }
-
-    /**
      * Get public key of card
      * @param apdu apdu command
      * @APDU       P1 = 0, P2 = 0, L_c = none, DATA = none
@@ -268,24 +253,6 @@ public class CardSmartApplet extends Applet {
                 }
             } else {
                 ISOException.throwIt(RES_ERR_GENERAL);
-            }
-        }
-
-        if (!this.getSCObjectsInitialized()) {
-            try {
-                secureChannel.initSecureChannelObjects();
-                this.setSCObjectsInitialized(true);
-                return;
-            } catch (StorageException e) {
-                ISOException.throwIt(RES_ERR_ENCRYPTION);
-            } catch (InvalidArgumentException e) {
-                ISOException.throwIt(RES_ERR_MAC);
-            } catch (ConsistencyException e) {
-                ISOException.throwIt(RES_ERR_SECRET_POLICY);
-            } catch (SecureChannelException e) {
-                ISOException.throwIt(RES_ERR_INPUT_DATA);
-            } catch (Exception e) {
-                ISOException.throwIt(RES_ERR_NO_DATA);
             }
         }
 
