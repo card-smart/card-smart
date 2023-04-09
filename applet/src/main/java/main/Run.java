@@ -22,6 +22,7 @@ import java.security.spec.ECPoint;
 import java.security.spec.ECPublicKeySpec;
 import java.util.Arrays;
 
+import javacard.framework.ISO7816;
 import javacard.security.AESKey;
 import javacard.security.KeyBuilder;
 import javacard.security.Signature;
@@ -126,16 +127,27 @@ public class Run {
             // 1. pad PIN value to 10 B if needed
             // 2. encrypt PIN
             byte[] encryptedPayload = aesEncrypt(providedPIN, iv, encryptionKey);
-            // 3. compute MAC over command and payload
-            // 3a. prepare temporary buffer with prepnded instructions
+            // 3. prepare temporary buffer with prepended instructions
             byte[] apduBuffer = new byte[5 + encryptedPayload.length + 16];
             apduBuffer[0] = (byte) 0xB0; // CLA
             apduBuffer[1] = (byte) 0x32; // INS
             apduBuffer[2] = apduBuffer[3] = 0; // P1, P2
             apduBuffer[4] = (byte) (encryptedPayload.length + 16); // payload + MAC size
-            System.arraycopy(encryptedPayload, 0, apduBuffer, 0, encryptedPayload.length);
-            // 3b. compute MAC and append after payload in apduBuffer
+            System.arraycopy(encryptedPayload, 0, apduBuffer, 5, encryptedPayload.length);
+            // 4. compute MAC and append after payload in apduBuffer
             computeMacAndAppend(apduBuffer, (short) (5 + encryptedPayload.length), macKey, iv);
+            // 5. send to card
+            CommandAPDU verifyAPDU = new CommandAPDU(apduBuffer);
+            // 6. get response
+            ResponseAPDU verifyResponse = simulator.transmitCommand(verifyAPDU);
+            // 7a. verify MAC tag
+            boolean verified = verifyResponseMAC(macKey, verifyResponse.getBytes());
+            if (!verified) {
+                System.out.print("MAC not verified!");
+                return;
+            }
+            // 7b. set MAC as new iv
+            setIV(iv, verifyResponse.getBytes(), (short) verifyResponse.getBytes().length);
         }
     }
 
@@ -338,13 +350,33 @@ public class Run {
         return sha512.digest();
     }
 
-    public static void computeMacAndAppend(byte[] apduBuffer, short length, byte[] key, byte[] iv)  {
+    /**
+     * Compute MAC tag from 5 byte of APDU (instructions), 11 bytes from aux buffer and encrypted payload
+     * @param apduBuffer prepared buffer with instructions and encrypted payload
+     * @param length count of bytes in buffer
+     * @param key MAC key
+     * @param aux buffer for padding
+     */
+    public static void computeMacAndAppend(byte[] apduBuffer, short length, byte[] key, byte[] aux)  {
+        Signature scMac = Signature.getInstance(Signature.ALG_AES_MAC_128_NOPAD, false);
+        AESKey macKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES_TRANSIENT_DESELECT, KeyBuilder.LENGTH_AES_256, false);
+        macKey.setKey(key, (short) 0);
+        scMac.init(macKey, Signature.MODE_SIGN);
+        scMac.update(apduBuffer, (short) 0, (short) 5); // first 5 instruction bytes
+        scMac.update(aux, (short) 0, (short) 11); // pad them with some values
+        scMac.sign(apduBuffer, (short) 5, (short) (length - 5), apduBuffer, length);
+    }
+
+    public static boolean verifyResponseMAC(byte[] key, byte[] responseBuffer) {
         Signature scMac = Signature.getInstance(Signature.ALG_AES_MAC_128_NOPAD, false);
         AESKey macKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES_TRANSIENT_DESELECT, KeyBuilder.LENGTH_AES_256, false);
         macKey.setKey(key, (short) 0);
         scMac.init(macKey, Signature.MODE_VERIFY);
-        scMac.update(apduBuffer, (short) 0, (short) 5);
-        scMac.update(iv, (short) 0, (short) (16 - 5));
-        scMac.sign(apduBuffer, (short) 5, (short) (length - 5), apduBuffer, length);
+        return scMac.verify(responseBuffer, (short) 0, (short) (responseBuffer.length - 16),
+                responseBuffer, (short) (responseBuffer.length - 16), (short) 16);
+    }
+
+    public static void setIV(byte[] iv, byte[] newIv, short newIvOffset) {
+        System.arraycopy(newIv, newIvOffset, iv, 0, iv.length);
     }
  }
