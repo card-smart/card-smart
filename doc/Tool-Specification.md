@@ -37,7 +37,6 @@
      * IV is `IV`
 6. <span style="color:brown">tool sends APDU with command `Card Init`</span>
    * APDU: `0xB0 | 0x41 | 0x00 | 0x00 | 0x81 | data [129 B]`
-
      * DATA: `publicKey [65 B] | IV [16 B] | payload [48 B]`
 7. <span style="color:green">card responds</span>
    * RES: `0x90 0x00` (success, `pairingSecret` and `PIN` set)
