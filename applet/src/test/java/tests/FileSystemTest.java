@@ -15,7 +15,7 @@ class FileSystemTest {
 
         byte[] buffer = new byte[160];
         try {
-            short len = fs.getAllNames(buffer);
+            short len = fs.getAllNames(buffer, (short) 0);
             Assertions.assertEquals(0, len);
         } catch (Exception e) {
             Assertions.fail("Getting all names failed.");
@@ -176,7 +176,7 @@ class FileSystemTest {
             output[1] = 1; output[2] = 2; output[3] = 3; output[4] = 4;
             output[5] = 4;
             output[6] = 2; output[7] = 2; output[8] = 3; output[9] = 4;
-            short len = fs.getAllNames(buffer);
+            short len = fs.getAllNames(buffer, (short) 0);
             Assertions.assertEquals(10, len);
             Assertions.assertArrayEquals(buffer, output);
         } catch (Exception e) {

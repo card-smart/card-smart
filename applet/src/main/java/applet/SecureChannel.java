@@ -13,6 +13,7 @@ public class SecureChannel {
     /*
      * Secure channel constants
      */
+    private static final short EC_KEY_SIZE = (short) 256;
     private static final short AES_BLOCK_SIZE = (short) 16;
     private static final short MAC_SIZE = (short) 16;
     private static final short PAIRING_SECRET_LENGTH = (short) 32;
@@ -21,18 +22,19 @@ public class SecureChannel {
     /*
      * Algorithm implementations
      */
-    RandomData random;
+    private final RandomData random;
     private final KeyAgreement ecdh;
     private final Signature mac;
-    MessageDigest sha512;
-    Cipher aesCbc;
+    private final MessageDigest sha512;
+    private final Cipher aesCbc;
 
     private final AESKey encryptionKey;
     private final AESKey macKey;
-    private final KeyPair ecKeypair;
     private final byte[] secret;
     private final byte[] iv;
     private final byte[] pairingSecret;
+
+    private final KeyPair ecKeypair;
 
     /*
      * Initialize new secure channel instance, prepare algorithms and generate first card EC keypair
@@ -55,7 +57,8 @@ public class SecureChannel {
         iv = JCSystem.makeTransientByteArray(AES_BLOCK_SIZE, JCSystem.CLEAR_ON_DESELECT);
 
         // card EC keypair
-        this.ecKeypair = new KeyPair(KeyPair.ALG_EC_FP, KeyBuilder.LENGTH_EC_FP_256);
+        ecKeypair = new KeyPair(KeyPair.ALG_EC_FP, EC_KEY_SIZE);
+        SECP256r1.setCurveParameters(ecKeypair);
         ecKeypair.genKeyPair();
 
         // persistent pairing secret used for secure channel after card initialization
@@ -251,10 +254,20 @@ public class SecureChannel {
         return (short) (encryptedLength + MAC_SIZE);
     }
 
+    /**
+     * Delete data for current secure channel instance
+     */
     public void closeSecureChannel() {
         encryptionKey.clearKey();
         macKey.clearKey();
-        Util.arrayFillNonAtomic(secret, (short) 0, PAIRING_SECRET_LENGTH, (byte) 0);
         Util.arrayFillNonAtomic(iv, (short) 0, AES_BLOCK_SIZE, (byte) 0);
+    }
+
+    /**
+     * Erase all sensitive secure channel data
+     */
+    public void eraseSecureChannel() {
+        this.closeSecureChannel();
+        Util.arrayFillNonAtomic(secret, (short) 0, PAIRING_SECRET_LENGTH, (byte) 0);
     }
 }
