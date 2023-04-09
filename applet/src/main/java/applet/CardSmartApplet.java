@@ -230,7 +230,7 @@ public class CardSmartApplet extends Applet {
         byte[] apduBuffer = apdu.getBuffer();
         // some key should be always generated
         short keyLength = secureChannel.getCardPublicKey(apduBuffer, ISO7816.OFFSET_CDATA);
-        apdu.setOutgoingAndSend((short) 0, keyLength);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, keyLength);
     }
 
     /**
