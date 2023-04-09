@@ -24,35 +24,40 @@ public class Main {
     public static void main(String[] args) throws Exception {
         run.main();
 
-        /*
-        This is for our testing - on simulator or on a real card - specified above,
-        You can use either sendAPDU() function where you can specify
-        command line arguments in an array to avoid writing them each time:
+//
+//        /*
+//        This is for our testing - on simulator or on a real card - specified above,
+//        simulator is the default and only call, as the real card is not implemented yet
+//
+//        You can use either sendAPDU() function where you can specify
+//        command line arguments in an array to avoid writing them each time:
+//
+//            sendAPDU(cmdParser, new String[]{"-v", "meno", "--pin", "pinik"});
+//
+//        OR you can use smartie function to test more behaviour.
+//        It will run smartie app and expect input until you type 'quit':
+//
+//            smartie$ -v name --pin 75436
+//            // some output
+//            smartie$ --list
+//            // some output
+//            smartie$ quit
+//         */
+//        if (!release) {
+//            sendAPDU(new String[]{"-v", "meno", "--pin", "pinik"});
+//            //smartie();
+//            return;
+//        }
+//
+//        // THIS IS FOR RELEASE, NOT TESTING
+//        if (args.length > 0) {
+//            CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, args);
+//            // TODO call desired instruction
+//            return;
+//        }
+//
+//        smartie();
 
-            sendAPDU(cmdParser, new String[]{"-v", "meno", "--pin", "pinik"});
-
-        OR you can use smartie function to test more behaviour.
-        It will run smartie app and expect input until you type 'quit':
-
-            smartie$ -v name --pin 75436
-            // some output
-            smartie$ --list
-            // some output
-            smartie$ quit
-         */
-        if (!release) {
-            sendAPDU(new String[]{"-v", "meno", "--pin", "pinik"});
-            //smartie();
-            return;
-        }
-
-        if (args.length > 0) {
-            CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, args);
-            // TODO call desired instruction
-            return;
-        }
-
-        smartie();
     }
 
     private static void simulator(Arguments args, CommandLine cmd) {
@@ -77,6 +82,7 @@ public class Main {
             simulator(args, cmd_parsed);
             return;
         }
+
 
         final CardManager cardMngr = cardSelectApplet();
         if (cardMngr == null) {

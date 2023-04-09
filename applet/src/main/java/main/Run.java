@@ -23,6 +23,7 @@ import java.security.spec.ECPublicKeySpec;
 import java.util.Arrays;
 
 import javacard.framework.ISO7816;
+
 import javacard.security.AESKey;
 import javacard.security.KeyBuilder;
 import javacard.security.Signature;
@@ -161,7 +162,7 @@ public class Run {
      * @return converted public key object
      * @apiNote https://stackoverflow.com/questions/26159149/how-can-i-get-a-publickey-object-from-ec-public-key-bytes
      */
-    private static ECPublicKey convertBytesToPublicKey(byte[] ecPoint) {
+    public static ECPublicKey convertBytesToPublicKey(byte[] ecPoint) {
         if(ecPoint[0] != '\04')
             throw new IllegalArgumentException();
         // split byte array into two coordinates
@@ -202,7 +203,7 @@ public class Run {
      * Generate 32B pairing secret
      * @return random data
      */
-    private static byte[] generatePairingSecret() {
+    public static byte[] generatePairingSecret() {
         SecureRandom secureRandom = new SecureRandom();
         byte[] randomBytes = new byte[32];
         secureRandom.nextBytes(randomBytes);
@@ -210,11 +211,14 @@ public class Run {
     }
 
     /**
-     * Generate 16B IV and store it
+     * Generate 16B IV
+     * @return random data
      */
-    private static void generateIV(byte[] iv) {
+    public static byte[] generateIV() {
         SecureRandom secureRandom = new SecureRandom();
-        secureRandom.nextBytes(iv);
+        byte[] randomBytes = new byte[16];
+        secureRandom.nextBytes(randomBytes);
+        return randomBytes;
     }
 
     /**
@@ -222,8 +226,10 @@ public class Run {
      * @param cardPublicKey public key received from card converted into ECPublicKey
      * @param toolPrivateKey ephemeral private key of tool
      * @return 32B derived secret value
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
      */
-    private static byte[] getDerivedSecret(ECPublicKey cardPublicKey, ECPrivateKey toolPrivateKey) throws NoSuchAlgorithmException, InvalidKeyException {
+    public static byte[] getDerivedSecret(ECPublicKey cardPublicKey, ECPrivateKey toolPrivateKey) throws NoSuchAlgorithmException, InvalidKeyException {
         KeyAgreement ecdh = KeyAgreement.getInstance("ECDH");
         ecdh.init(toolPrivateKey);
         ecdh.doPhase(cardPublicKey, true);
@@ -231,9 +237,9 @@ public class Run {
     }
 
     /**
-     * Custom implementation of ISO9797 M2 padding
-     * @param data data to be padded
-     * @return padded data
+     * Custom implementation of
+     * @param data
+     * @return
      */
     private static byte[] padISO9797_M2(byte[] data) {
         int paddingLength = 16 - (data.length % 16);
@@ -250,8 +256,14 @@ public class Run {
      * @param ivBytes IV value in bytes, 16B
      * @param keyBytes key value in bytes, 32B
      * @return encrypted array of bytes
+     * @throws NoSuchPaddingException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidAlgorithmParameterException
+     * @throws InvalidKeyException
+     * @throws IllegalBlockSizeException
+     * @throws BadPaddingException
      */
-    private static byte[] aesEncrypt(byte[] data, byte[] ivBytes, byte[] keyBytes)
+    public static byte[] aesEncrypt(byte[] data, byte[] ivBytes, byte[] keyBytes)
             throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         IvParameterSpec iv = new IvParameterSpec(ivBytes);
         SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
