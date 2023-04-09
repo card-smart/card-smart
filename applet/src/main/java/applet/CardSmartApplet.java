@@ -77,7 +77,7 @@ public class CardSmartApplet extends Applet {
     protected static final byte SECRET_MAX_LEN = (byte)32;
 
     /* Cryptographic instances */
-    private OwnerPIN pin;
+    private final OwnerPIN pin;
 
     /*
      * Other instances
@@ -86,7 +86,7 @@ public class CardSmartApplet extends Applet {
     FileSystem fileSystem;
     SecureChannel secureChannel;
     private final boolean[] isUserAuthenticated;
-    private final boolean[] isAppletInitialized;
+    private boolean isAppletInitialized;
 
     public CardSmartApplet(byte[] bArray, short bOffset, byte bLength) {
         /* Set initial PIN */
@@ -97,8 +97,7 @@ public class CardSmartApplet extends Applet {
         this.isUserAuthenticated = JCSystem.makeTransientBooleanArray((short) 1, JCSystem.CLEAR_ON_DESELECT);
         this.setUserAuthenticated(false);
 
-        /* Create array for denoting the applet is initialized */
-        this.isAppletInitialized = new boolean[1];
+        /* Make applet uninitialized */
         this.setAppletInitialized(false);
 
         /* Initialize filesystem with empty records */
@@ -209,7 +208,7 @@ public class CardSmartApplet extends Applet {
      * Returns true when applet is initialized
      */
     private boolean getAppletInitialized() {
-        return this.isAppletInitialized[0];
+        return this.isAppletInitialized;
     }
 
     /**
@@ -217,7 +216,7 @@ public class CardSmartApplet extends Applet {
      * @param isInitialized value to be set
      */
     private void setAppletInitialized(boolean isInitialized) {
-        this.isAppletInitialized[0] = isInitialized;
+        this.isAppletInitialized = isInitialized;
     }
 
     /**
