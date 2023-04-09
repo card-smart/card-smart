@@ -16,6 +16,8 @@ public class Arguments {
     public String secretFile;
     public byte[] newPIN;
     public boolean loginNeeded = true;
+    public byte[] pairingSecret;
+    public String pairingSecretFile;
 
     public Arguments(CommandLine cmd) {
         this.cmd = cmd;
@@ -41,6 +43,25 @@ public class Arguments {
         if (cmd.hasOption('i')) {
             secretFile = cmd.getOptionValue('i');
         }
+        if (cmd.hasOption('f')) {
+            pairingSecretFile = cmd.getOptionValue('f');
+        }
+    }
+
+    public boolean validatePairingSecret() {
+        if (cmd.hasOption('f')) {
+            try {
+                pairingSecret = Files.readAllBytes(Paths.get(cmd.getOptionValue('f')));
+            } catch (IOException e) {
+                pairingSecret = Secure.createSecret(pairingSecretFile);
+                return pairingSecret != null;
+            }
+            if (secretValue.length != 32) {
+                System.out.println("Pairing secret needs to be 32 bytes long!");
+                return false;
+            }
+        }
+        return true;
     }
 
     public byte[] padBytes(byte[] PIN, int len) {
@@ -60,6 +81,9 @@ public class Arguments {
                 return false;
             }
         }
+
+        if (!validatePairingSecret())
+            return false;
 
         if (PIN != null) {
             if (PIN.length > 10)

@@ -76,7 +76,7 @@ task dumpClassPath(dependsOn: ['idea']) {
 }
 
 application {
-    mainClass = 'main.Run'
+    mainClass = 'tool.Main'
 }
 
 test {

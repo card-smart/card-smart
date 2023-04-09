@@ -17,6 +17,9 @@ public class CommandParser implements CommandLineParser {
         options.addOption(new Option("l", "list", false, "list all names"));
         options.addOption(buildOption("v", "value", "name", "get value of secret"));
         options.addOption(buildOption("p", "pin", "pin", "use PIN"));
+        options.addOption(buildOption("f", "pairing-secret-file", "path",
+                "file path to store the pairing secret for secure channel," +
+                "if file does not exist then the file and pairing secret will be created"));
         options.addOption(buildOption("c", "change-pin", "pin", "change PIN"));
         options.addOption(buildOption("s", "store-secret", "name", "store secret from input file"));
         options.addOption(buildOption("i", "in-file", "file", "input file"));
@@ -67,6 +70,7 @@ public class CommandParser implements CommandLineParser {
                 || !validateOptionArg(cmd, "s")
                 || !validateOptionArg(cmd, "i")
                 || !validateOptionArg(cmd, "d")
+                || !validateOptionArg(cmd, "f")
                 || !validateOptionArg(cmd, "p")) {
             return false;
         }
