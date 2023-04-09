@@ -4,9 +4,8 @@ import javacard.framework.JCSystem;
 import javacard.framework.Util;
 import javacard.security.*;
 
-import static applet.CardSmartApplet.*;
-
 public class Record {
+    /* Record private data */
     private final byte[] name;
     private byte nameLength; // 4-10 bytes
     private final AESKey secret;
@@ -14,7 +13,13 @@ public class Record {
     private final Checksum checksum;
     private final byte[] crc;
     private final byte[] tempArray;
+
+    /* Record constants */
     private static final byte CRC_LEN = (byte) 4;
+    protected static final byte NAME_MIN_LEN = (byte)4;
+    protected static final byte NAME_MAX_LEN = (byte)10;
+    protected static final byte SECRET_MIN_LEN = (byte)2;
+    protected static final byte SECRET_MAX_LEN = (byte)32;
 
     /**
      * Create empty container for secret name and data
@@ -24,12 +29,8 @@ public class Record {
         this.name = new byte[NAME_MAX_LEN];
         this.nameLength = 0;
 
-        /* Prepare empty secret */
-        byte[] initSecret = JCSystem.makeTransientByteArray(SECRET_MAX_LEN, JCSystem.CLEAR_ON_DESELECT);
-        Util.arrayFillNonAtomic(initSecret, (short)0, SECRET_MAX_LEN, (byte)0);
-
         this.secret = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_256, false);
-        this.secret.setKey(initSecret, (short) 0);
+        this.secret.setKey(new byte[SECRET_MAX_LEN], (short) 0);
         this.secretLength = 0;
 
         /* Initialize checksum */
@@ -48,9 +49,6 @@ public class Record {
      * @throw StorageException
      * */
     private void setName(byte[] buffer, short nameOffset, byte nameLength) throws InvalidArgumentException {
-        if (nameLength == 0) {
-            throw new InvalidArgumentException();
-        }
         if (nameLength < NAME_MIN_LEN || nameLength > NAME_MAX_LEN) {
             throw new InvalidArgumentException();
         }
@@ -88,12 +86,15 @@ public class Record {
      * @throw InvalidArgumentException
      * @throw StorageException
      * */
-    private void setSecret(byte[] buffer, short secretOffset, byte secretLength) throws InvalidArgumentException, StorageException {
-        if (secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN || buffer.length < (short)(secretOffset + SECRET_MAX_LEN)) {
+    private void setSecret(byte[] buffer, short secretOffset, byte secretLength)
+            throws InvalidArgumentException, StorageException {
+        if (secretLength < SECRET_MIN_LEN || secretLength > SECRET_MAX_LEN
+                || buffer.length < (short)(secretOffset + SECRET_MAX_LEN)) {
             throw new InvalidArgumentException();
         }
         try {
-            Util.arrayFillNonAtomic(buffer, (short)(secretOffset + secretLength), (short)(SECRET_MAX_LEN - secretLength), (byte)0);
+            Util.arrayFillNonAtomic(buffer, (short)(secretOffset + secretLength),
+                    (short)(SECRET_MAX_LEN - secretLength), (byte)0);
             this.secret.clearKey();
             this.secret.setKey(buffer, secretOffset);
             this.secretLength = secretLength;
@@ -112,7 +113,8 @@ public class Record {
      * @return length of concatenated names and their lengths
      * */
     public short getSecret(byte[] outputBuffer, short outputOffset) throws InvalidArgumentException, ConsistencyException {
-        if (outputBuffer.length < SECRET_MIN_LEN || outputBuffer.length < (short)(outputOffset + SECRET_MAX_LEN)) {
+        if (outputBuffer.length < SECRET_MIN_LEN
+                || outputBuffer.length < (short)(outputOffset + SECRET_MAX_LEN)) {
             throw new InvalidArgumentException();
         }
 
@@ -139,7 +141,8 @@ public class Record {
      * @throw InvalidArgumentException
      * @throw StorageException
      * */
-    public void initRecord(byte[] buffer, byte nameLength, short nameOffset, byte secretLength, short secretOffset) throws InvalidArgumentException, StorageException {
+    public void initRecord(byte[] buffer, byte nameLength, short nameOffset, byte secretLength, short secretOffset)
+            throws InvalidArgumentException, StorageException {
         this.setName(buffer, nameOffset, nameLength);
         this.setSecret(buffer, secretOffset, secretLength);
         checksum.doFinal(buffer, secretOffset, secretLength, crc, (short) 0);

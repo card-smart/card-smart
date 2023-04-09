@@ -4,16 +4,15 @@ import applet.FileSystem;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 class FileSystemTest {
+
 
     @Test
     void initFilesystem() {
         FileSystem fs = new FileSystem();
         Assertions.assertEquals(fs.getNumberOfRecords(), 0);
 
-        byte[] buffer = new byte[160];
+        byte[] buffer = new byte[160 + 16];
         try {
             short len = fs.getAllNames(buffer, (short) 0);
             Assertions.assertEquals(0, len);
@@ -170,8 +169,8 @@ class FileSystemTest {
         }
 
         try {
-            byte[] buffer = new byte[160];
-            byte[] output = new byte[160];
+            byte[] buffer = new byte[160 + 16];
+            byte[] output = new byte[160 + 16];
             output[0] = 4;
             output[1] = 1; output[2] = 2; output[3] = 3; output[4] = 4;
             output[5] = 4;
