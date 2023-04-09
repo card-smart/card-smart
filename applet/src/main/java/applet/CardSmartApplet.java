@@ -396,7 +396,7 @@ public class CardSmartApplet extends Applet {
         if (SW == RES_ERR_RESET) {
             try {
                 this.resetToDefault();
-            } catch (Exception e) {
+            } catch (StorageException e) {
                 ISOException.throwIt(RES_ERR_STORAGE);
             }
         }
