@@ -543,7 +543,7 @@ public class Run {
         // decrypt payload
         // TODO: not working decryption
         byte[] decrypted = aesDecrypt(responseData, encryptionKey, iv);
-        if (decrypted.length == 2) {
+        if (decrypted.length > 0) {
             System.out.print("Decrypted payload!\n");
         }
         // set MAC as new iv for next encryption
