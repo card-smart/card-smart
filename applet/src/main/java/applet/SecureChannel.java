@@ -114,10 +114,7 @@ public class SecureChannel {
         // 4. decrypt payload data part in place
         short payloadOffset = (short)(ivOffset + AES_BLOCK_SIZE);
         try {
-            //apduBuffer[ISO7816.OFFSET_LC] = (byte)
-            aesCbc.doFinal(apduBuffer, payloadOffset,
-                    (short) 48,
-                    apduBuffer, ISO7816.OFFSET_CDATA);
+            aesCbc.doFinal(apduBuffer, payloadOffset, (short) 48, apduBuffer, ISO7816.OFFSET_CDATA);
         } catch (Exception e) {
             ISOException.throwIt(RES_ERR_DECRYPTION);
         }

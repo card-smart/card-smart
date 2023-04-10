@@ -436,7 +436,8 @@ public class CardSmartApplet extends Applet {
                 SW = RES_ERR_STORAGE;
             }
         }
-        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+        short length = secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, length);
     }
 
     /**
@@ -496,7 +497,8 @@ public class CardSmartApplet extends Applet {
         }
         secureChannel.decryptAPDU(apduBuffer);
         short SW = changePIN(apduBuffer);
-        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+        short length = secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, length);
     }
 
     /**
@@ -560,7 +562,8 @@ public class CardSmartApplet extends Applet {
 
         secureChannel.decryptAPDU(apduBuffer);
         short SW = storeSecret(apduBuffer);
-        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+        short length = secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, length);
     }
 
     /**
@@ -623,8 +626,8 @@ public class CardSmartApplet extends Applet {
         if (SW != RES_SUCCESS)
             ISOException.throwIt(SW);
         short namesLength = apduBuffer[ISO7816.OFFSET_LC];
-        secureChannel.encryptResponse(apduBuffer, namesLength, ISO7816.OFFSET_CDATA, SW);
-        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, namesLength);
+        short length = secureChannel.encryptResponse(apduBuffer, namesLength, ISO7816.OFFSET_CDATA, SW);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, length);
     }
 
     /**
@@ -682,7 +685,8 @@ public class CardSmartApplet extends Applet {
         }
         secureChannel.decryptAPDU(apduBuffer);
         short SW = deleteSecret(apduBuffer);
-        secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+        short length = secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, length);
     }
 
     /**
@@ -742,8 +746,8 @@ public class CardSmartApplet extends Applet {
 
         secureChannel.decryptAPDU(apduBuffer);
         short SW = getSecret(apduBuffer);
-        short encryptedLength = secureChannel.encryptResponse(apduBuffer, apduBuffer[ISO7816.OFFSET_LC], ISO7816.OFFSET_CDATA, SW);
-        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, encryptedLength);
+        short length = secureChannel.encryptResponse(apduBuffer, apduBuffer[ISO7816.OFFSET_LC], ISO7816.OFFSET_CDATA, SW);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, length);
     }
 
     /**
