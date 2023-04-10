@@ -641,10 +641,10 @@ public class CardSmartApplet extends Applet {
         if (!this.getUserAuthenticated()) {
             return RES_ERR_NOT_LOGGED;
         }
-        /* Create record in filesystem */
+        /* Delete record from filesystem */
         try {
-            byte nameLength = apduBuffer[ISO7816.OFFSET_CDATA];
-            short nameOffset = 1 + ISO7816.OFFSET_CDATA;
+            byte nameLength = apduBuffer[ISO7816.OFFSET_LC];
+            short nameOffset = ISO7816.OFFSET_CDATA;
             fileSystem.deleteRecord(apduBuffer, nameLength, nameOffset);
         } catch (StorageException e) {
             return RES_ERR_STORAGE;
