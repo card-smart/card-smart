@@ -56,7 +56,7 @@ public class Main {
     }
 
     private static void simulator(Arguments args, CommandLine cmd) {
-        run.getTries();
+        //run.getTries();
         if (args.loginNeeded) {
             //run.login(args);
         }
