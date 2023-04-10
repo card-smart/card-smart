@@ -265,10 +265,9 @@ public class Secure {
         aesCbc.init(key, javacardx.crypto.Cipher.MODE_DECRYPT, ivBytes, (short) 0, (short) 16);
 
         // TODO: not working decryption - padded block corrupted
-//        short decryptedLength = aesCbc.doFinal(responseBuffer, (short) 0, (short) 16, responseBuffer, (short) 0);
-//        byte[] decryptedResponse = new byte[decryptedLength];
-//        System.arraycopy(responseBuffer, 0, decryptedResponse, 0, decryptedLength);
-//        return decryptedResponse;
-        return null;
+        short decryptedLength = aesCbc.doFinal(responseBuffer, (short) 0, (short) (responseBuffer.length - 16), responseBuffer, (short) 0);
+        byte[] decryptedResponse = new byte[decryptedLength];
+        System.arraycopy(responseBuffer, 0, decryptedResponse, 0, decryptedLength);
+        return decryptedResponse;
     }
 }

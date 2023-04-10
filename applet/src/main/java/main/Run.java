@@ -35,7 +35,7 @@ public class Run {
 
     public static void main() throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException {
         // 1. create simulator
-         simulator = new CardSimulator();
+        simulator = new CardSimulator();
 
         // 2. install applet
         AID appletAID = AIDUtil.create("F000000001");
@@ -284,19 +284,19 @@ public class Run {
         // verify MAC tag
         boolean verified = Secure.verifyResponseMAC(macKey, responseData);
         if (!verified) {
-            System.out.print("MAC not verified!\n");
+            System.out.println("MAC not verified!");
             return null;
         } else {
-            System.out.print("MAC verified!\n");
+            System.out.println("MAC verified!");
         }
-        // set MAC as new iv
-        Secure.setIV(iv, responseData, (short) (responseData.length - 16));
         // decrypt payload
         // TODO: not working decryption
         byte[] decrypted = Secure.aesDecrypt(responseData, encryptionKey, iv);
-//        if (decrypted.length == 2) {
-//            System.out.print("Decrypted payload!");
-//        }
-        return null;
+        if (decrypted.length > 0) {
+            System.out.println("Decrypted payload!");
+        }
+        // set MAC as new iv for next encryption
+        Secure.setIV(iv, responseData, (short) (responseData.length - 16));
+        return decrypted;
     }
  }

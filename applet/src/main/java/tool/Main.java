@@ -338,16 +338,28 @@ public class Main {
     // TODO change to match decomposision of code - is it good to return CommandAPDU?
     public static CommandAPDU prepareSecureAPDU(byte CLA, byte INS, byte[] data, byte[] iv, byte[] key, byte[] macKey)
             throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
-        byte[] encryptedPayload = Secure.aesEncrypt(data, iv, key);
+        byte[] apduBuffer = null;
+        short filledLength = 0;
+        if (data != null) {
+            // no data part in APDU
+            byte[] encryptedPayload = Secure.aesEncrypt(data, iv, key);
+            apduBuffer = new byte[5 + encryptedPayload.length + 16];
+            apduBuffer[4] = (byte) (encryptedPayload.length + 16); // payload + MAC size
+            System.arraycopy(encryptedPayload, 0, apduBuffer, 5, encryptedPayload.length);
+            filledLength += encryptedPayload.length;
+        } else {
+            apduBuffer = new byte[5 + 16];
+            apduBuffer[4] = (byte) 16;
+        }
+
         // prepare temporary buffer with prepended instructions
-        byte[] apduBuffer = new byte[5 + encryptedPayload.length + 16];
         apduBuffer[0] = CLA;
         apduBuffer[1] = INS;
         apduBuffer[2] = apduBuffer[3] = 0; // P1, P2
-        apduBuffer[4] = (byte) (encryptedPayload.length + 16); // payload + MAC size
-        System.arraycopy(encryptedPayload, 0, apduBuffer, 5, encryptedPayload.length);
+        filledLength += 5;
         // compute MAC and append after payload in apduBuffer
-        Secure.computeMacAndAppend(apduBuffer, (short) (5 + encryptedPayload.length), macKey, iv);
+        Secure.computeMacAndAppend(apduBuffer, filledLength, macKey, iv);
+        // set iv for next decryption
         Secure.setIV(iv, apduBuffer, (short) (apduBuffer.length - 16));
         // send to card
         return new CommandAPDU(apduBuffer);
@@ -365,19 +377,19 @@ public class Main {
         // verify MAC tag
         boolean verified = Secure.verifyResponseMAC(macKey, responseData);
         if (!verified) {
-            System.out.print("MAC not verified!");
+            System.out.println("MAC not verified!");
             return null;
         } else {
-            System.out.print("MAC verified!");
+            System.out.println("MAC verified!");
         }
-        // set MAC as new iv
-        Secure.setIV(iv, responseData, (short) (responseData.length - 16));
         // decrypt payload
         // TODO: not working decryption
         byte[] decrypted = Secure.aesDecrypt(responseData, encryptionKey, iv);
-//        if (decrypted.length == 2) {
-//            System.out.print("Decrypted payload!");
-//        }
-        return null;
+        if (decrypted.length > 0) {
+            System.out.println("Decrypted payload!");
+        }
+        // set MAC as new iv for next encryption
+        Secure.setIV(iv, responseData, (short) (responseData.length - 16));
+        return decrypted;
     }
 }
