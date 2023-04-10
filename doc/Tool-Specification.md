@@ -37,7 +37,6 @@
      * IV is `IV`
 6. <span style="color:brown">tool sends APDU with command `Card Init`</span>
    * APDU: `0xB0 | 0x41 | 0x00 | 0x00 | 0x81 | data [129 B]`
-
      * DATA: `publicKey [65 B] | IV [16 B] | payload [48 B]`
 7. <span style="color:green">card responds</span>
    * RES: `0x90 0x00` (success, `pairingSecret` and `PIN` set)
@@ -83,11 +82,14 @@
    * **first IV after opening secure channel** was received from card is `toolIV`
    * key is `encryptionKey`
    * result is encrypted `payload` [16 B] (generally divisible by 16 B)
-3. <span style="color:brown">tool computes MAC over `CLA`, `INS`, `P1`, `P2` and `payload`</span>
-   * **MAC is computed in one shot** from buffer `0xB0 | 0x32 | 0x00 | 0x00 | 0x20 | payload [16B]`
-     * with `macKey`
-     * `Lc` (length of APDU data part) contains the whole length of expected APDU - it contains also MAC length
-       * here `16 + 16 ~ 0x20` for encrypted PIN and appended MAC
+3. <span style="color:brown">tool computes MAC over `CLA`, `INS`, `P1`, `P2, ``Lc`` and `payload`</span>
+   * **MAC is computed in 3 shots**
+     * first 5 bytes `0xB0 | 0x32 | 0x00 | 0x00 | 0x20`
+     * 11 bytes for IV (because of MAC from AES CBC with no padding)
+     * rest (payload) is already padded since encrypted
+   * with `macKey`
+   * `Lc` (length of APDU data part) contains the whole length of expected APDU - it contains also MAC length
+     * here `16 + 16 ~ 0x20` for encrypted PIN and appended MAC
    * **MAC must be stored as it is used as IV by card in encryption of response** as `cardIV`
 4. <span style="color:brown">tool appends MAC after `payload` part in APDU</span>
 5. <span style="color:brown">tool sends APDU to card</span>

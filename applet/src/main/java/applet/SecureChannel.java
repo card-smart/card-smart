@@ -44,14 +44,14 @@ public class SecureChannel {
         ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_PLAIN, false);
         mac = Signature.getInstance(Signature.ALG_AES_MAC_128_NOPAD, false);
         sha512 = MessageDigest.getInstance(MessageDigest.ALG_SHA_512, false);
-        aesCbc = Cipher.getInstance(Cipher.ALG_AES_CBC_ISO9797_M2,false);
+        aesCbc = Cipher.getInstance(Cipher.ALG_AES_CBC_ISO9797_M2, false);
 
         // prepare objects for symmetric AES & MAC keys
         encryptionKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES_TRANSIENT_DESELECT, KeyBuilder.LENGTH_AES_256, false);
         macKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES_TRANSIENT_DESELECT, KeyBuilder.LENGTH_AES_256, false);
 
         // temporary buffer used for storing generated/derived secrets
-        secret = JCSystem.makeTransientByteArray(PAIRING_SECRET_LENGTH, JCSystem.CLEAR_ON_DESELECT);
+        secret = JCSystem.makeTransientByteArray((short) (PAIRING_SECRET_LENGTH * 2), JCSystem.CLEAR_ON_DESELECT);
 
         // temporary buffer used for storing iv (= last MAC value seen from counterpart)
         iv = JCSystem.makeTransientByteArray(AES_BLOCK_SIZE, JCSystem.CLEAR_ON_DESELECT);
@@ -86,7 +86,7 @@ public class SecureChannel {
      */
     public void initSecureChannel(byte[] newPairingSecret, short offset) {
         // set new pairing secret after init command in the applet
-        Util.arrayCopy(newPairingSecret, (short) 0, pairingSecret, offset, PAIRING_SECRET_LENGTH);
+        Util.arrayCopy(newPairingSecret, offset, pairingSecret, (short) 0, PAIRING_SECRET_LENGTH);
         // update keys
         ecKeypair.genKeyPair();
     }
@@ -100,26 +100,21 @@ public class SecureChannel {
         // 1. initialize ECDH with card EC private key
         ecdh.init(ecKeypair.getPrivate());
 
-        short publicKeyOffset = (short)(ISO7816.OFFSET_CDATA + 1);
         try {
             // 2. derive secret from card private key and incoming public key into secret buffer
-            // Use public key from apdu buffer
-            short publicKeyLength = apduBuffer[ISO7816.OFFSET_CDATA];
-            ecdh.generateSecret(apduBuffer, publicKeyOffset, publicKeyLength, secret, (short) 0);
+            ecdh.generateSecret(apduBuffer, ISO7816.OFFSET_CDATA, (short) 65, secret, (short) 0);
         } catch(Exception e) {
             ISOException.throwIt(RES_ERR_ECDH);
         }
         // 3. get IV from apduBuffer and prepare decryption
-        short ivOffset = (short)(publicKeyOffset + apduBuffer[ISO7816.OFFSET_CDATA]);
+        short ivOffset = (short) (ISO7816.OFFSET_CDATA + 65);
         encryptionKey.setKey(secret, (short) 0);
         aesCbc.init(encryptionKey, Cipher.MODE_DECRYPT, apduBuffer, ivOffset, AES_BLOCK_SIZE);
 
         // 4. decrypt payload data part in place
         short payloadOffset = (short)(ivOffset + AES_BLOCK_SIZE);
         try {
-            apduBuffer[ISO7816.OFFSET_LC] = (byte) aesCbc.doFinal(apduBuffer, payloadOffset,
-                    (short) ((short) (apduBuffer[ISO7816.OFFSET_LC] & 0xff) - payloadOffset + ISO7816.OFFSET_CDATA),
-                    apduBuffer, ISO7816.OFFSET_CDATA);
+            aesCbc.doFinal(apduBuffer, payloadOffset, (short) 48, apduBuffer, ISO7816.OFFSET_CDATA);
         } catch (Exception e) {
             ISOException.throwIt(RES_ERR_DECRYPTION);
         }
@@ -138,7 +133,7 @@ public class SecureChannel {
 
         try {
             // 2. get derived secret from card's private key and tool's public key
-            len = ecdh.generateSecret(apduBuffer, ISO7816.OFFSET_CDATA, apduBuffer[ISO7816.OFFSET_LC], secret, (short) 0);
+            len = ecdh.generateSecret(apduBuffer, ISO7816.OFFSET_CDATA, (short) 65, secret, (short) 0);
         } catch(Exception e) {
             ISOException.throwIt(RES_ERR_SECURE_CHANNEL);
             return;
@@ -170,7 +165,9 @@ public class SecureChannel {
         // 1. initialize MAC algorithm with AES MAC secret key
         mac.init(macKey, Signature.MODE_VERIFY);
         // 2. load data (including instruction bytes) and verify the tag
-        return mac.verify(apduBuffer, (short) 0, (short) (5 + dataLength), apduBuffer, macOffset, MAC_SIZE);
+        mac.update(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA);
+        mac.update(iv, (short) 0, (short) (AES_BLOCK_SIZE - ISO7816.OFFSET_CDATA));
+        return mac.verify(apduBuffer, ISO7816.OFFSET_CDATA, dataLength, apduBuffer, macOffset, MAC_SIZE);
     }
 
     /**
@@ -191,6 +188,11 @@ public class SecureChannel {
         if (!verifyMAC(apduBuffer, payloadLength, macOffset)) {
             closeSecureChannel();
             ISOException.throwIt(RES_ERR_MAC);
+        }
+        if (payloadLength == 0) {
+            // 5. store MAC tag as IV for next encryption of response
+            Util.arrayCopyNonAtomic(apduBuffer, macOffset, iv, (short) 0, MAC_SIZE);
+            return;
         }
         try {
             // 4. initialize AES cipher with IV (last MAC generated by card in response)
@@ -240,7 +242,7 @@ public class SecureChannel {
         short encryptedLength = 0;
         try {
             // 2. prepare AES
-            aesCbc.init(encryptionKey, Cipher.MODE_ENCRYPT, secret, (short) 0, AES_BLOCK_SIZE);
+            aesCbc.init(encryptionKey, Cipher.MODE_ENCRYPT, iv, (short) 0, AES_BLOCK_SIZE);
             // 3. encrypt the resBuffer in place
             encryptedLength = aesCbc.doFinal(responseBuffer, responseOffset, responseLength, responseBuffer, responseOffset);
         } catch (Exception e) {
@@ -249,7 +251,7 @@ public class SecureChannel {
         // 4. compute MAC of the whole encrypted part
         computeMAC(responseBuffer, encryptedLength, responseOffset);
         // 5. store MAC tag as IV for next decryption of APDU
-        short macOffset = (short) (responseOffset + responseLength);
+        short macOffset = (short) (responseOffset + encryptedLength);
         Util.arrayCopyNonAtomic(responseBuffer, macOffset, iv, (short) 0, AES_BLOCK_SIZE);
         return (short) (encryptedLength + MAC_SIZE);
     }
