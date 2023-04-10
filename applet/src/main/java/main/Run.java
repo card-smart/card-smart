@@ -64,6 +64,94 @@ public class Run {
             // get response
             ResponseAPDU verifyResponse = simulator.transmitCommand(verifyAPDU);
             byte[] response = getResponseData(macKey, encryptionKey, iv, verifyResponse.getData());
+            if (Arrays.equals(response, new byte[]{-112, 0})) {
+                System.out.print("Verification successful!\n");
+            } else {
+                System.out.print("Verification not successful!\n");
+            }
+        }
+        /* Second APDU after opening the secure channel, i.e. PIN change */
+        {
+            // prepare secure APDU
+            byte[] newPIN = {0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0, 0, 0};
+            CommandAPDU changePINAPDU = prepareSecureAPDU((byte) 0xB0, (byte) 0x33, newPIN, iv, encryptionKey, macKey);
+            // get response
+            ResponseAPDU changePINResponse = simulator.transmitCommand(changePINAPDU);
+            byte[] response = getResponseData(macKey, encryptionKey, iv, changePINResponse.getData());
+            assert response != null;
+            if (Arrays.equals(response, new byte[]{-112, 0})) {
+                System.out.print("Change PIN successful!\n");
+            } else {
+                System.out.print("Change PIN not successful!\n");
+            }
+        }
+        /* Third APDU after opening the secure channel, i.e. new PIN verify */
+        {
+            // prepare secure APDU
+            byte[] newPIN = {0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0, 0, 0};
+            CommandAPDU changePINAPDU = prepareSecureAPDU((byte) 0xB0, (byte) 0x32, newPIN, iv, encryptionKey, macKey);
+            // get response
+            ResponseAPDU changePINResponse = simulator.transmitCommand(changePINAPDU);
+            byte[] response = getResponseData(macKey, encryptionKey, iv, changePINResponse.getData());
+            assert response != null;
+            if (Arrays.equals(response, new byte[]{-112, 0})) {
+                System.out.print("Verify new PIN successful!\n");
+            } else {
+                System.out.print("Verify new PIN not successful!\n");
+            }
+        }
+        { // Store secret
+            byte[] nameAndSecret = {4, 0x31, 0x32, 0x33, 0x34, 4,0x51, 0x52, 0x53, 0x54 };
+            CommandAPDU storeAPDU = prepareSecureAPDU((byte) 0xB0, (byte) 0x35, nameAndSecret, iv, encryptionKey, macKey);
+            ResponseAPDU storeResponse = simulator.transmitCommand(storeAPDU);
+            byte[] response = getResponseData(macKey, encryptionKey, iv, storeResponse.getData());
+            if (Arrays.equals(response, new byte[]{-112, 0})) {
+                System.out.print("Store secret successful!\n");
+            } else {
+                System.out.print("Store secret not successful!\n");
+            }
+        }
+        { // Get secret
+            byte[] name = {0x31, 0x32, 0x33, 0x34};
+            CommandAPDU getAPDU = prepareSecureAPDU((byte) 0xB0, (byte) 0x34, name, iv, encryptionKey, macKey);
+            ResponseAPDU getResponse = simulator.transmitCommand(getAPDU);
+            byte[] response = getResponseData(macKey, encryptionKey, iv, getResponse.getData());
+            if (Arrays.equals(response, new byte[]{0x51, 0x52, 0x53, 0x54, -112, 0})) {
+                System.out.print("Get secret successful!\n");
+            } else {
+                System.out.print("Get secret not successful!\n");
+            }
+        }
+        { // Get all names
+            CommandAPDU getAPDU = prepareSecureAPDU((byte) 0xB0, (byte) 0x30, null, iv, encryptionKey, macKey);
+            ResponseAPDU getResponse = simulator.transmitCommand(getAPDU);
+            byte[] response = getResponseData(macKey, encryptionKey, iv, getResponse.getData());
+            if (Arrays.equals(response, new byte[]{4, 0x31, 0x32, 0x33, 0x34, -112, 0})) {
+                System.out.print("Get all names successful!\n");
+            } else {
+                System.out.print("Get all names not successful!\n");
+            }
+        }
+        { // delete secret
+            byte[] name = {0x31, 0x32, 0x33, 0x34};
+            CommandAPDU getAPDU = prepareSecureAPDU((byte) 0xB0, (byte) 0x36, name, iv, encryptionKey, macKey);
+            ResponseAPDU getResponse = simulator.transmitCommand(getAPDU);
+            byte[] response = getResponseData(macKey, encryptionKey, iv, getResponse.getData());
+            if (Arrays.equals(response, new byte[]{-112, 0})) {
+                System.out.print("Delete secret successful!\n");
+            } else {
+                System.out.print("Delete secret not successful!\n");
+            }
+        }
+        { // Get all names should be empty
+            CommandAPDU getAPDU = prepareSecureAPDU((byte) 0xB0, (byte) 0x30, null, iv, encryptionKey, macKey);
+            ResponseAPDU getResponse = simulator.transmitCommand(getAPDU);
+            byte[] response = getResponseData(macKey, encryptionKey, iv, getResponse.getData());
+            if (Arrays.equals(response, new byte[]{-112, 0})) {
+                System.out.print("Get all names empty successful!\n");
+            } else {
+                System.out.print("Get all names empty not successful!\n");
+            }
         }
     }
 
@@ -316,11 +404,10 @@ public class Run {
         aesCbc.init(key, javacardx.crypto.Cipher.MODE_DECRYPT, ivBytes, (short) 0, (short) 16);
 
         // TODO: not working decryption - padded block corrupted
-//        short decryptedLength = aesCbc.doFinal(responseBuffer, (short) 0, (short) 16, responseBuffer, (short) 0);
-//        byte[] decryptedResponse = new byte[decryptedLength];
-//        System.arraycopy(responseBuffer, 0, decryptedResponse, 0, decryptedLength);
-//        return decryptedResponse;
-        return null;
+        short decryptedLength = aesCbc.doFinal(responseBuffer, (short) 0, (short) (responseBuffer.length - 16), responseBuffer, (short) 0);
+        byte[] decryptedResponse = new byte[decryptedLength];
+        System.arraycopy(responseBuffer, 0, decryptedResponse, 0, decryptedLength);
+        return decryptedResponse;
     }
 
 //--------- HIGH LEVEL API---------------------------------------------------------------------------------------------
@@ -410,16 +497,27 @@ public class Run {
      */
     public static CommandAPDU prepareSecureAPDU(byte CLA, byte INS, byte[] data, byte[] iv, byte[] key, byte[] macKey)
             throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
-        byte[] encryptedPayload = aesEncrypt(data, iv, key);
+        byte[] apduBuffer = null;
+        short filledLength = 0;
+        if (data != null) {
+            // no data part in APDU
+            byte[] encryptedPayload = aesEncrypt(data, iv, key);
+            apduBuffer = new byte[5 + encryptedPayload.length + 16];
+            apduBuffer[4] = (byte) (encryptedPayload.length + 16); // payload + MAC size
+            System.arraycopy(encryptedPayload, 0, apduBuffer, 5, encryptedPayload.length);
+            filledLength += encryptedPayload.length;
+        } else {
+            apduBuffer = new byte[5 + 16];
+            apduBuffer[4] = (byte) 16;
+        }
         // prepare temporary buffer with prepended instructions
-        byte[] apduBuffer = new byte[5 + encryptedPayload.length + 16];
         apduBuffer[0] = CLA;
         apduBuffer[1] = INS;
         apduBuffer[2] = apduBuffer[3] = 0; // P1, P2
-        apduBuffer[4] = (byte) (encryptedPayload.length + 16); // payload + MAC size
-        System.arraycopy(encryptedPayload, 0, apduBuffer, 5, encryptedPayload.length);
+        filledLength += 5;
         // compute MAC and append after payload in apduBuffer
-        computeMacAndAppend(apduBuffer, (short) (5 + encryptedPayload.length), macKey, iv);
+        computeMacAndAppend(apduBuffer, filledLength, macKey, iv);
+        // set iv for next decryption
         setIV(iv, apduBuffer, (short) (apduBuffer.length - 16));
         // send to card
         return new CommandAPDU(apduBuffer);
@@ -437,19 +535,19 @@ public class Run {
         // verify MAC tag
         boolean verified = verifyResponseMAC(macKey, responseData);
         if (!verified) {
-            System.out.print("MAC not verified!");
+            System.out.print("MAC not verified!\n");
             return null;
         } else {
-            System.out.print("MAC verified!");
+            System.out.print("MAC verified!\n");
         }
-        // set MAC as new iv
-        setIV(iv, responseData, (short) (responseData.length - 16));
         // decrypt payload
         // TODO: not working decryption
         byte[] decrypted = aesDecrypt(responseData, encryptionKey, iv);
-//        if (decrypted.length == 2) {
-//            System.out.print("Decrypted payload!");
-//        }
-        return null;
+        if (decrypted.length == 2) {
+            System.out.print("Decrypted payload!\n");
+        }
+        // set MAC as new iv for next encryption
+        setIV(iv, responseData, (short) (responseData.length - 16));
+        return decrypted;
     }
  }
