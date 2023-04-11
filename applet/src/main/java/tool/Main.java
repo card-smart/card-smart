@@ -6,20 +6,13 @@ import cardTools.Util;
 import main.Run;
 import org.apache.commons.cli.CommandLine;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.smartcardio.Card;
 import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Scanner;
@@ -32,15 +25,13 @@ public class Main {
     private static final String APPLET_AID = "63617264736D6172746170706C6574";
     private static final byte[] APPLET_AID_BYTE = Util.hexStringToByteArray(APPLET_AID);
 
-    // demo to try initApplet, openSC and secure verifyPIN on real card
-    public static void demo() throws Exception {
-        // USER COMMAND LINE INPUT
+    public static void main(String[] args) throws Exception {
+        // create secure object implementing all SC functions, all sensitive data (keys, iv) are stored inside
+        ToolSecureChannel secure = new ToolSecureChannel();
+
+        // DEMO: user input
         String path = "./pairing_secret_file";
         byte[] providedPIN = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
-        // GLOBAL VARIABLES NEEDED FOR ENCRYPTION AND MAC
-        byte[] encryptionKey = new byte[32];
-        byte[] macKey = new byte[32];
-        byte[] iv = new byte[16];
 
         final CardManager cardMngr = cardSelectApplet();
         if (cardMngr == null) {
@@ -49,25 +40,22 @@ public class Main {
 
         /* Initialize applet workflow */
         {
-            sendAPDU(new String[]{"-t", "-f", "./pairing_secret_file", "-p", "0000"});
+            sendAPDU(new String[]{"-t", "-f", "./pairing_secret_file", "-p", "0000"}, secure);
         }
         /* Create secure channel */
         {
-            openSecureChannel(cardMngr, path, iv, encryptionKey, macKey);
+            // get and extract pairing secret from path
+            byte[] pairingSecret = tool.Util.readFromFile(path);
+            openSecureChannel(cardMngr, pairingSecret, secure);
         }
-        /* First APDU after opening the secure channel, i.e. PIN verify */
+        /* PIN verify demo */
         {
             // prepare secure APDU
-            CommandAPDU verifyAPDU = prepareSecureAPDU((byte) 0xB0, (byte) 0x32, providedPIN, iv, encryptionKey, macKey);
+            CommandAPDU verifyAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, providedPIN);
             // get response
             ResponseAPDU verifyResponse = cardMngr.transmit(verifyAPDU);
-            byte[] response = getResponseData(macKey, encryptionKey, iv, verifyResponse.getData());
+            byte[] response = secure.getResponseData(verifyResponse.getData());
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        //run.main();
-        Main.demo();
 
 //
 //        /*
@@ -115,7 +103,7 @@ public class Main {
         }
     }
 
-    private static void sendAPDU(String[] cmd) throws Exception {
+    private static void sendAPDU(String[] cmd, ToolSecureChannel secure) throws Exception {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
         Arguments args = new Arguments(cmd_parsed);
 
@@ -154,7 +142,7 @@ public class Main {
         else if (cmd_parsed.hasOption('d'))
             cardDeleteSecret(cardMngr, args);
         else if (cmd_parsed.hasOption('t'))
-            initializeApplet(cardMngr, args);
+            initializeApplet(cardMngr, args, secure);
         else if (cmd_parsed.hasOption('p')) // this optin has to be always the last
             cardVerifyPIN(cardMngr, args);
 
@@ -167,14 +155,14 @@ public class Main {
         //cardGetNames();
     }
 
-    private static void smartie() throws Exception {
+    private static void smartie(ToolSecureChannel secure) throws Exception {
         Scanner scanner = new Scanner(System.in);
         System.out.print("smartie$ ");
         String line;
 
         while (!Objects.equals((line = scanner.nextLine()), "quit")) {
             String[] cmd = line.split(" ");
-            sendAPDU(cmd);
+            sendAPDU(cmd, secure);
 
             System.out.print("smartie$ ");
         }
@@ -258,34 +246,13 @@ public class Main {
         return response.getData();
     }
 
-    public static void initializeApplet(CardManager cardMngr, Arguments args/*byte[] providedPIN, String path, KeyPair keyPair, byte[] iv*/)
-            throws NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException, CardException {
-        KeyPair keyPair = Secure.generateECKeyPair();
-        ECPrivateKey privateKey = (ECPrivateKey) keyPair.getPrivate();
-        ECPublicKey publicKey = (ECPublicKey) keyPair.getPublic();
-        // get card's public key
-        byte[] apduData = cardGetPublicKey(cardMngr);
-        ECPublicKey cardPublicKey = Secure.convertBytesToPublicKey(apduData);
-        // generate IV for encryption
-        byte[] iv = new byte[16];
-        Secure.generateIV(iv);
-        // derived shared secret as key for encryption
-        byte[] derivedSecret = Secure.getDerivedSecret(cardPublicKey, privateKey);
-        // encrypt [PIN | pairingSecret]
-        byte[] data = new byte[42];
-        System.arraycopy(args.PIN, 0, data, 0, args.PIN.length);
-        // pairing secret is already loaded/generated in args
-        System.arraycopy(args.pairingSecret, 0, data, args.PIN.length, args.pairingSecret.length);
-        byte[] encrypted = Secure.aesEncrypt(data, iv, derivedSecret);
-        // init command APDU: 0xB0 | 0x41 | 0x00 | 0x00 | 0x81 | publicKey [65 B] | IV [16 B] | encrypted [48 B]
-        byte[] payload = new byte[129];
-        byte[] publicKeyBytes = Secure.getPublicKeyBytes(publicKey);
-        // copy into APDU data part
-        System.arraycopy(publicKeyBytes, 0, payload, 0, publicKeyBytes.length);
-        System.arraycopy(iv, 0, payload, publicKeyBytes.length, iv.length);
-        System.arraycopy(encrypted, 0, payload, publicKeyBytes.length + iv.length, encrypted.length);
+    private static void initializeApplet(CardManager cardMngr, Arguments args, ToolSecureChannel secure)
+            throws CardException, NoSuchAlgorithmException, InvalidKeyException {
+        byte[] cardPublicKeyBytes = cardGetPublicKey(cardMngr);
+        // create payload for APDU: publicKey [65 B] | IV [16 B] | encrypted [48 B]
+        byte[] payload = secure.prepareInitializationPayload(cardPublicKeyBytes, args.PIN, args.pairingSecret);
 
-        // get response from card
+        // init command APDU: 0xB0 | 0x41 | 0x00 | 0x00 | 0x81 | publicKey [65 B] | IV [16 B] | encrypted [48 B]
         ResponseAPDU initResponse = cardMngr.transmit(buildAPDU(0x41, payload));
         if (initResponse.getSW() == 0x9000)
             System.out.println("Success to init applet!");
@@ -294,23 +261,13 @@ public class Main {
         }
     }
 
-    public static void openSecureChannel(CardManager cardMngr, String path, byte[] iv, byte[] encryptionKey, byte[] macKey)
-            throws IOException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException, CardException {
-        // get and extract pairing secret from path
-        byte[] pairingSecret = tool.Util.readFromFile(path);
+    private static void openSecureChannel(CardManager cardMngr, byte[] pairingSecret, ToolSecureChannel secure)
+            throws CardException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException {
         // get public key from card
-        // TODO make method for this
         ResponseAPDU getKeyResponse = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
-        // convert bytes into public key
-        byte[] apduData = getKeyResponse.getData();
-        ECPublicKey cardPublicKey = Secure.convertBytesToPublicKey(apduData);
+        byte[] cardPublicKeyBytes = getKeyResponse.getData();
         // tool generates ephemeral key
-        KeyPair keyPair = Secure.generateECKeyPair();
-        ECPublicKey publicKey = (ECPublicKey) keyPair.getPublic();
-        ECPrivateKey privateKey = (ECPrivateKey) keyPair.getPrivate();
-        byte[] publicKeyBytes = Secure.getPublicKeyBytes(publicKey);
-        // tool sends Open Secure Channel Command APDU with public key
-        // TODO make method for this
+        byte[] publicKeyBytes = secure.getFreshPublicKeyBytes();
         ResponseAPDU openSCResponse = cardMngr.transmit(buildAPDU(0x42, publicKeyBytes));
         if (openSCResponse.getSW() == 0x9000)
             System.out.print("Success to open SC!\n");
@@ -318,81 +275,6 @@ public class Main {
             System.out.print("Failed to open SC!\n");
             return;
         }
-        // parse returned salt and IV
-        byte[] salt = new byte[32];
-        System.arraycopy(openSCResponse.getData(), 0, salt, 0, salt.length);
-        System.arraycopy(openSCResponse.getData(), salt.length, iv, 0, iv.length);
-        // encryption and MAC keys
-        byte[] sharedSecrets = Secure.computeSharedSecrets(cardPublicKey, privateKey, pairingSecret, salt);
-        System.arraycopy(sharedSecrets, 0, encryptionKey, 0, encryptionKey.length);
-        System.arraycopy(sharedSecrets, encryptionKey.length, macKey, 0, macKey.length);
-    }
-
-    /**
-     * Prepare APDU with encrypted payload and appended MAC tag
-     * @param CLA CLA byte
-     * @param INS INS byte
-     * @param data data to be sent
-     * @param iv IV for encryption and MAC
-     * @param key key for encryption
-     * @param macKey key for MAC
-     * @return prepared CommandAPDU object
-     */
-    // TODO change to match decomposision of code - is it good to return CommandAPDU?
-    public static CommandAPDU prepareSecureAPDU(byte CLA, byte INS, byte[] data, byte[] iv, byte[] key, byte[] macKey)
-            throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
-        byte[] apduBuffer = null;
-        short filledLength = 0;
-        if (data != null) {
-            // no data part in APDU
-            byte[] encryptedPayload = Secure.aesEncrypt(data, iv, key);
-            apduBuffer = new byte[5 + encryptedPayload.length + 16];
-            apduBuffer[4] = (byte) (encryptedPayload.length + 16); // payload + MAC size
-            System.arraycopy(encryptedPayload, 0, apduBuffer, 5, encryptedPayload.length);
-            filledLength += encryptedPayload.length;
-        } else {
-            apduBuffer = new byte[5 + 16];
-            apduBuffer[4] = (byte) 16;
-        }
-
-        // prepare temporary buffer with prepended instructions
-        apduBuffer[0] = CLA;
-        apduBuffer[1] = INS;
-        apduBuffer[2] = apduBuffer[3] = 0; // P1, P2
-        filledLength += 5;
-        // compute MAC and append after payload in apduBuffer
-        Secure.computeMacAndAppend(apduBuffer, filledLength, macKey, iv);
-        // set iv for next decryption
-        Secure.setIV(iv, apduBuffer, (short) (apduBuffer.length - 16));
-        // send to card
-        return new CommandAPDU(apduBuffer);
-    }
-
-    /**
-     * Get byte array of response data: payload | SW1 | SW2
-     * @param macKey key for MAC verification
-     * @param encryptionKey key for decryption
-     * @param iv IV for decryption
-     * @param responseData encrypted data buffer
-     * @return byte response
-     */
-    public static byte[] getResponseData(byte[] macKey, byte[] encryptionKey, byte[] iv, byte[] responseData) {
-        // verify MAC tag
-        boolean verified = Secure.verifyResponseMAC(macKey, responseData);
-        if (!verified) {
-            System.out.println("MAC not verified!");
-            return null;
-        } else {
-            System.out.println("MAC verified!");
-        }
-        // decrypt payload
-        // TODO: not working decryption
-        byte[] decrypted = Secure.aesDecrypt(responseData, encryptionKey, iv);
-        if (decrypted.length > 0) {
-            System.out.println("Decrypted payload!");
-        }
-        // set MAC as new iv for next encryption
-        Secure.setIV(iv, responseData, (short) (responseData.length - 16));
-        return decrypted;
+        secure.createSharedSecrets(pairingSecret, cardPublicKeyBytes, openSCResponse.getData());
     }
 }
