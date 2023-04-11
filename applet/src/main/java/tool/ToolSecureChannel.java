@@ -54,7 +54,7 @@ public class ToolSecureChannel {
         // derive simple encryption key and set it as key
         ECPublicKey cardPublicKey = this.convertBytesToPublicKey(cardPublicKeyBytes);
         byte[] simpleDerivedSecret = this.getDerivedSecret(cardPublicKey, (ECPrivateKey) keyPair.getPrivate());
-        aesKey.setKey(simpleDerivedSecret, (short) simpleDerivedSecret.length);
+        aesKey.setKey(simpleDerivedSecret, (short) 0);
 
 
         // move [PIN | pairingSecret] into buffer
@@ -298,6 +298,7 @@ public class ToolSecureChannel {
      */
     private byte[] aesEncrypt(byte[] data) {
         int encryptedLength = data.length % 16 == 0 ? data.length / 16 : data.length / 16 + 1;
+        encryptedLength *= 16;
         this.aesCbc.init(aesKey, javacardx.crypto.Cipher.MODE_ENCRYPT, this.iv, (short) 0, (short) 16);
         byte[] encryptedBuffer = new byte[encryptedLength];
         aesCbc.doFinal(data, (short) 0, (short) data.length, encryptedBuffer, (byte) 0);

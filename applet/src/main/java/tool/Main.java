@@ -1,15 +1,14 @@
 package tool;
 
+import applet.CardSmartApplet;
 import cardTools.CardManager;
 import cardTools.RunConfig;
 import cardTools.Util;
-import main.Run;
 import org.apache.commons.cli.CommandLine;
 
 import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -18,7 +17,6 @@ import java.util.Objects;
 import java.util.Scanner;
 
 public class Main {
-    private static final Run run = new Run();
     private static final CommandParser cmdParser = new CommandParser();
     private static final boolean release = false;
     private static final boolean simulator = false;
@@ -28,35 +26,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         // create secure object implementing all SC functions, all sensitive data (keys, iv) are stored inside
         ToolSecureChannel secure = new ToolSecureChannel();
-
-        // DEMO: user input
-        String path = "./pairing_secret_file";
-        byte[] providedPIN = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
-
-        final CardManager cardMngr = cardSelectApplet();
-        if (cardMngr == null) {
-            return;
-        }
-
-        /* Initialize applet workflow */
-        {
-            sendAPDU(new String[]{"-t", "-f", "./pairing_secret_file", "-p", "0000"}, secure);
-        }
-        /* Create secure channel */
-        {
-            // get and extract pairing secret from path
-            byte[] pairingSecret = tool.Util.readFromFile(path);
-            openSecureChannel(cardMngr, pairingSecret, secure);
-        }
-        /* PIN verify demo */
-        {
-            // prepare secure APDU
-            CommandAPDU verifyAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, providedPIN);
-            // get response
-            ResponseAPDU verifyResponse = cardMngr.transmit(verifyAPDU);
-            byte[] response = secure.getResponseData(verifyResponse.getData());
-        }
-
+        demo(secure);
 //
 //        /*
 //        This is for our testing - on simulator or on a real card - specified above,
@@ -93,13 +63,87 @@ public class Main {
 
     }
 
-    private static void simulator(Arguments args, CommandLine cmd) {
-        //run.getTries();
-        if (args.loginNeeded) {
-            //run.login(args);
+    private static void demo(ToolSecureChannel secure) throws Exception {
+        // connect to card
+        final CardManager cardMngr = cardSelectApplet();
+        // command line arguments
+        String[] cmd = new String[]{"-t", "-f", "./pairing_secret_file", "-p", "0000"};
+        CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
+        Arguments demoArguments = new Arguments(cmd_parsed);
+        if (!demoArguments.validateInput()) {
+            System.out.print("Arguments invalid!");
+            return;
         }
-        if (cmd.hasOption('c')) {
-            //run.changePIN(args);
+        /* Initialize applet workflow */
+        initializeApplet(cardMngr, demoArguments, secure);
+        openSecureChannel(cardMngr, demoArguments, secure);
+        /* PIN verify demo */
+        CommandAPDU verifyAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, demoArguments.PIN);
+        ResponseAPDU verifyResponse = cardMngr.transmit(verifyAPDU);
+        byte[] response = secure.getResponseData(verifyResponse.getData());
+        if (Arrays.equals(response, new byte[]{-112, 0})) {
+            System.out.print("Verification successful!\n");
+        } else {
+            System.out.print("Verification not successful!\n");
+            return;
+        }
+        /* PIN change */
+        byte[] newPIN = {0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0, 0, 0};
+        CommandAPDU changePINAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x33, newPIN);
+        ResponseAPDU changePINResponse = cardMngr.transmit(changePINAPDU);
+        response = secure.getResponseData(changePINResponse.getData());
+        if (Arrays.equals(response, new byte[]{-112, 0})) {
+            System.out.print("Change PIN successful!\n");
+        } else {
+            System.out.print("Change PIN not successful!\n");
+            return;
+        }
+        /* Store secret */
+        byte[] nameAndSecret = {4, 0x31, 0x32, 0x33, 0x34, 4,0x51, 0x52, 0x53, 0x54 };
+        CommandAPDU storeAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x35, nameAndSecret);
+        ResponseAPDU storeResponse = cardMngr.transmit(storeAPDU);
+        response = secure.getResponseData(storeResponse.getData());
+        if (Arrays.equals(response, new byte[]{-112, 0})) {
+            System.out.print("Store secret successful!\n");
+        } else {
+            System.out.print("Store secret not successful!\n");
+        }
+        /* Get secret */
+        byte[] name = {0x31, 0x32, 0x33, 0x34};
+        CommandAPDU getAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x34, name);
+        ResponseAPDU getResponse = cardMngr.transmit(getAPDU);
+        response = secure.getResponseData(getResponse.getData());
+        if (Arrays.equals(response, new byte[]{0x51, 0x52, 0x53, 0x54, -112, 0})) {
+            System.out.print("Get secret successful!\n");
+        } else {
+            System.out.print("Get secret not successful!\n");
+        }
+        /* Get all names */
+        CommandAPDU getNamesAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x30, null);
+        ResponseAPDU getNamesResponse = cardMngr.transmit(getNamesAPDU);
+        response = secure.getResponseData(getNamesResponse.getData());
+        if (Arrays.equals(response, new byte[]{4, 0x31, 0x32, 0x33, 0x34, -112, 0})) {
+            System.out.print("Get all names successful!\n");
+        } else {
+            System.out.print("Get all names not successful!\n");
+        }
+        /* Delete secret */
+        CommandAPDU deleteAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x36, name);
+        ResponseAPDU deleteResponse = cardMngr.transmit(deleteAPDU);
+        response = secure.getResponseData(deleteResponse.getData());
+        if (Arrays.equals(response, new byte[]{-112, 0})) {
+            System.out.print("Delete secret successful!\n");
+        } else {
+            System.out.print("Delete secret not successful!\n");
+        }
+        /* Empty get names */
+        getNamesAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x30, null);
+        getNamesResponse = cardMngr.transmit(getNamesAPDU);
+        response = secure.getResponseData(getNamesResponse.getData());
+        if (Arrays.equals(response, new byte[]{-112, 0})) {
+            System.out.print("Get all names empty successful!\n");
+        } else {
+            System.out.print("Get all names not empty successful!\n");
         }
     }
 
@@ -110,12 +154,6 @@ public class Main {
         if (!args.validateInput()) {
             return;
         }
-
-        if (simulator) {
-            simulator(args, cmd_parsed);
-            return;
-        }
-
 
         final CardManager cardMngr = cardSelectApplet();
         if (cardMngr == null) {
@@ -166,6 +204,21 @@ public class Main {
 
             System.out.print("smartie$ ");
         }
+    }
+
+    private static CardManager demoCardSelectApplet() throws Exception {
+        final CardManager cardMngr = new CardManager(true, APPLET_AID_BYTE);
+        final RunConfig runCfg = RunConfig.getDefaultConfig();
+        runCfg.setAppletToSimulate(CardSmartApplet.class);
+        runCfg.setTestCardType(RunConfig.CARD_TYPE.JCARDSIMLOCAL); // Use local simulator
+
+        // Connect to first available card
+        System.out.print("Connecting to card...");
+        if (!cardMngr.Connect(runCfg)) {
+            System.out.println(" Failed.");
+        }
+        System.out.println(" Done.");
+        return cardMngr;
     }
 
     private static CardManager cardSelectApplet() throws Exception {
@@ -261,7 +314,7 @@ public class Main {
         }
     }
 
-    private static void openSecureChannel(CardManager cardMngr, byte[] pairingSecret, ToolSecureChannel secure)
+    private static void openSecureChannel(CardManager cardMngr, Arguments args, ToolSecureChannel secure)
             throws CardException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException {
         // get public key from card
         ResponseAPDU getKeyResponse = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
@@ -270,11 +323,11 @@ public class Main {
         byte[] publicKeyBytes = secure.getFreshPublicKeyBytes();
         ResponseAPDU openSCResponse = cardMngr.transmit(buildAPDU(0x42, publicKeyBytes));
         if (openSCResponse.getSW() == 0x9000)
-            System.out.print("Success to open SC!\n");
+            System.out.println("Success to open SC!");
         else {
-            System.out.print("Failed to open SC!\n");
+            System.out.println("Failed to open SC!");
             return;
         }
-        secure.createSharedSecrets(pairingSecret, cardPublicKeyBytes, openSCResponse.getData());
+        secure.createSharedSecrets(args.pairingSecret, cardPublicKeyBytes, openSCResponse.getData());
     }
 }
