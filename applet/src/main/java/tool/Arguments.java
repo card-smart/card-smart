@@ -56,7 +56,7 @@ public class Arguments {
                 pairingSecret = Secure.createSecret(pairingSecretFile);
                 return pairingSecret != null;
             }
-            if (secretValue.length != 32) {
+            if (pairingSecret.length != 32) {
                 System.out.println("Pairing secret needs to be 32 bytes long!");
                 return false;
             }
