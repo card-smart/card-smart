@@ -9,6 +9,7 @@ import org.apache.commons.cli.CommandLine;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.smartcardio.Card;
 import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
@@ -35,7 +36,7 @@ public class Main {
     public static void demo() throws Exception {
         // USER COMMAND LINE INPUT
         String path = "./pairing_secret_file";
-        byte[] providedPIN = {0x31, 0x32, 0x33, 0x34, 0, 0, 0, 0, 0, 0};
+        byte[] providedPIN = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
         // GLOBAL VARIABLES NEEDED FOR ENCRYPTION AND MAC
         byte[] encryptionKey = new byte[32];
         byte[] macKey = new byte[32];
@@ -48,8 +49,7 @@ public class Main {
 
         /* Initialize applet workflow */
         {
-            KeyPair keyPair = Secure.generateECKeyPair();
-            initializeApplet(cardMngr, providedPIN, path, keyPair, iv);
+            sendAPDU(new String[]{"-t", "-f", "./pairing_secret_file", "-p", "0000"});
         }
         /* Create secure channel */
         {
@@ -153,6 +153,8 @@ public class Main {
             cardStoreSecret(cardMngr, args);
         else if (cmd_parsed.hasOption('d'))
             cardDeleteSecret(cardMngr, args);
+        else if (cmd_parsed.hasOption('t'))
+            initializeApplet(cardMngr, args);
         else if (cmd_parsed.hasOption('p')) // this optin has to be always the last
             cardVerifyPIN(cardMngr, args);
 
@@ -250,25 +252,30 @@ public class Main {
         System.out.println(response);
     }
 
-    public static void initializeApplet(CardManager cardMngr, byte[] providedPIN, String path, KeyPair keyPair, byte[] iv)
+    private static byte[] cardGetPublicKey(CardManager cardMngr) throws CardException {
+        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
+        //TODO check response SW
+        return response.getData();
+    }
+
+    public static void initializeApplet(CardManager cardMngr, Arguments args/*byte[] providedPIN, String path, KeyPair keyPair, byte[] iv*/)
             throws NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException, CardException {
+        KeyPair keyPair = Secure.generateECKeyPair();
         ECPrivateKey privateKey = (ECPrivateKey) keyPair.getPrivate();
         ECPublicKey publicKey = (ECPublicKey) keyPair.getPublic();
         // get card's public key
-        // TODO make method for this
-        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
-        byte[] apduData = response.getData();
+        byte[] apduData = cardGetPublicKey(cardMngr);
         ECPublicKey cardPublicKey = Secure.convertBytesToPublicKey(apduData);
-        // generate pairing secret
-        byte[] pairingSecret = Secure.generatePairingSecret();
         // generate IV for encryption
+        byte[] iv = new byte[16];
         Secure.generateIV(iv);
         // derived shared secret as key for encryption
         byte[] derivedSecret = Secure.getDerivedSecret(cardPublicKey, privateKey);
         // encrypt [PIN | pairingSecret]
         byte[] data = new byte[42];
-        System.arraycopy(providedPIN, 0, data, 0, providedPIN.length);
-        System.arraycopy(pairingSecret, 0, data, providedPIN.length, pairingSecret.length);
+        System.arraycopy(args.PIN, 0, data, 0, args.PIN.length);
+        // pairing secret is already loaded/generated in args
+        System.arraycopy(args.pairingSecret, 0, data, args.PIN.length, args.pairingSecret.length);
         byte[] encrypted = Secure.aesEncrypt(data, iv, derivedSecret);
         // init command APDU: 0xB0 | 0x41 | 0x00 | 0x00 | 0x81 | publicKey [65 B] | IV [16 B] | encrypted [48 B]
         byte[] payload = new byte[129];
@@ -279,16 +286,12 @@ public class Main {
         System.arraycopy(encrypted, 0, payload, publicKeyBytes.length + iv.length, encrypted.length);
 
         // get response from card
-        // TODO make method for this
         ResponseAPDU initResponse = cardMngr.transmit(buildAPDU(0x41, payload));
         if (initResponse.getSW() == 0x9000)
-            System.out.print("Success to init applet!\n");
+            System.out.println("Success to init applet!");
         else {
-            System.out.print("Failed to init applet!\n");
-            return;
+            System.out.println("Failed to init applet!");
         }
-        // write pairingSecret into file
-        tool.Util.writeIntoFile(path, pairingSecret);
     }
 
     public static void openSecureChannel(CardManager cardMngr, String path, byte[] iv, byte[] encryptionKey, byte[] macKey)
