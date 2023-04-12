@@ -48,15 +48,15 @@ public class Arguments {
         }
     }
 
-    public boolean validatePairingSecret() {
+    private boolean validatePairingSecret() {
         if (cmd.hasOption('f')) {
             try {
                 pairingSecret = Files.readAllBytes(Paths.get(cmd.getOptionValue('f')));
             } catch (IOException e) {
-                pairingSecret = Secure.createSecret(pairingSecretFile);
+                pairingSecret = ToolSecureChannel.createPairingSecret(pairingSecretFile);
                 return pairingSecret != null;
             }
-            if (secretValue.length != 32) {
+            if (pairingSecret.length != 32) {
                 System.out.println("Pairing secret needs to be 32 bytes long!");
                 return false;
             }

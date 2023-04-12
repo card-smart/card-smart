@@ -15,6 +15,7 @@ public class CommandParser implements CommandLineParser {
         // quit
         options.addOption(new Option("h", "help", false, "print tool usage and options"));
         options.addOption(new Option("l", "list", false, "list all names"));
+        options.addOption(new Option("t", "init", false, "initialize applet"));
         options.addOption(buildOption("v", "value", "name", "get value of secret"));
         options.addOption(buildOption("p", "pin", "pin", "use PIN"));
         options.addOption(buildOption("f", "pairing-secret-file", "path",
@@ -87,6 +88,11 @@ public class CommandParser implements CommandLineParser {
         if ((cmd.hasOption("s") && !cmd.hasOption("i"))
                 || (cmd.hasOption("i") && !cmd.hasOption("s"))) {
             System.out.println("Commands: `-s` and `-i` need to be used together");
+            return false;
+        }
+
+        if (cmd.hasOption("t") && !cmd.hasOption("f")) {
+            System.out.println("Command: `-t` needs to be used with `-f`");
             return false;
         }
 
