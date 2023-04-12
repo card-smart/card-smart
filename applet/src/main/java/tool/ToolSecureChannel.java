@@ -148,9 +148,9 @@ public class ToolSecureChannel {
         if (!verified) {
             System.out.println("MAC not verified!");
             return null;
-        } else {
-            System.out.println("MAC verified!");
         }
+        
+        System.out.println("MAC verified!");
         // decrypt payload
         byte[] decrypted = this.aesDecrypt(responseData);
         if (decrypted.length > 0) {
