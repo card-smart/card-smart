@@ -56,8 +56,7 @@ public class CardSmartApplet extends Applet {
     protected static final short RES_ERR_STORAGE = (short)0x6B04;
     protected static final short RES_ERR_NAME_POLICY = (short)0x6B05;
     protected static final short RES_ERR_SECRET_POLICY = (short)0x6B06;
-    // protected static final short RES_ERR_NO_DATA = (short)0x6B07;
-    // protected static final short RES_ERR_INPUT_DATA = (short)0x6B08;
+     protected static final short RES_ERR_INPUT_DATA = (short)0x6B07;
     /* Unsupported instructions */
     protected static final short RES_UNSUPPORTED_CLA = (short)0x6C00;
     protected static final short RES_UNSUPPORTED_INS = (short)0x6C01;
@@ -239,6 +238,15 @@ public class CardSmartApplet extends Applet {
         byte[] apduBuffer = apdu.getBuffer();
         short dataLength = apdu.setIncomingAndReceive();
 
+        if (dataLength != 129) {
+            ISOException.throwIt(RES_ERR_INPUT_DATA);
+        }
+
+        // check that public key has first byte set to 0x04 (uncompressed point format)
+        if (apduBuffer[ISO7816.OFFSET_CDATA] != 0x04) {
+            ISOException.throwIt(RES_ERR_INPUT_DATA);
+        }
+
         // 1. if applet is initialized already and PIN was verified, first delete all data and reset PIN
         if (this.getAppletInitialized()) {
             if (this.getUserAuthenticated()) {
@@ -256,7 +264,6 @@ public class CardSmartApplet extends Applet {
         secureChannel.initDecrypt(apduBuffer);
 
         // 3. get PIN of decrypted apduBuffer
-        // TODO: Check PIN policy
         pin.update(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN);
 
         // 4. set pairingSecret and update current card EC keypair

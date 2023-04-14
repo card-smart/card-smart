@@ -115,6 +115,7 @@ public class SecureChannel {
         short payloadOffset = (short)(ivOffset + AES_BLOCK_SIZE);
         try {
             aesCbc.doFinal(apduBuffer, payloadOffset, (short) 48, apduBuffer, ISO7816.OFFSET_CDATA);
+            apduBuffer[ISO7816.OFFSET_LC] = 123; // 65B public key + 16B IV + 10B PIN + 32B pairing secret
         } catch (Exception e) {
             ISOException.throwIt(RES_ERR_DECRYPTION);
         }
