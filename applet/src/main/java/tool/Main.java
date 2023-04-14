@@ -65,7 +65,7 @@ public class Main {
 
     private static void demo(ToolSecureChannel secure) throws Exception {
         // connect to card
-        final CardManager cardMngr = cardSelectApplet();
+        final CardManager cardMngr = getCardMngr();
         // command line arguments
         String[] cmd = new String[]{"-t", "-f", "./pairing_secret_file", "-p", "0000"};
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
@@ -155,7 +155,7 @@ public class Main {
             return;
         }
 
-        final CardManager cardMngr = cardSelectApplet();
+        final CardManager cardMngr = getCardMngr();
         if (cardMngr == null) {
             return;
         }
@@ -206,25 +206,22 @@ public class Main {
         }
     }
 
-    private static CardManager demoCardSelectApplet() throws Exception {
-        final CardManager cardMngr = new CardManager(true, APPLET_AID_BYTE);
-        final RunConfig runCfg = RunConfig.getDefaultConfig();
-        runCfg.setAppletToSimulate(CardSmartApplet.class);
-        runCfg.setTestCardType(RunConfig.CARD_TYPE.JCARDSIMLOCAL); // Use local simulator
-
-        // Connect to first available card
-        System.out.print("Connecting to card...");
-        if (!cardMngr.Connect(runCfg)) {
-            System.out.println(" Failed.");
-        }
-        System.out.println(" Done.");
-        return cardMngr;
-    }
-
-    private static CardManager cardSelectApplet() throws Exception {
+    /**
+     * Returns CardManager instance of real or simulated card.
+     * Returned instance type depends on Main.simulator variable.
+     * Returned instance is already connected to the card and SELECT APDU was sent.
+     */
+    private static CardManager getCardMngr() throws Exception {
         CardManager cardMngr = new CardManager(true, APPLET_AID_BYTE);
         final RunConfig runCfg = RunConfig.getDefaultConfig();
-        runCfg.setTestCardType(RunConfig.CARD_TYPE.PHYSICAL); // Use real card
+        if (simulator) { // TODO or release?
+            runCfg.setAppletToSimulate(CardSmartApplet.class);
+            runCfg.setTestCardType(RunConfig.CARD_TYPE.JCARDSIMLOCAL); // Use simulator
+            System.out.println("USING SIMULATOR");
+        } else {
+            runCfg.setTestCardType(RunConfig.CARD_TYPE.PHYSICAL); // Use real card
+        }
+
         // Connect to first available card
         // NOTE: selects target applet based on AID specified in CardManager constructor
         System.out.print("Connecting to card...");
