@@ -85,8 +85,6 @@ public class Main {
             cardStoreSecret(cardMngr, args);
         else if (cmd_parsed.hasOption('d'))
             cardDeleteSecret(cardMngr, args);
-        else if (cmd_parsed.hasOption('t'))
-            initializeApplet(cardMngr, args, secure);
         else if (cmd_parsed.hasOption('p')) // this option has to be always the last
             cardVerifyPIN(cardMngr, args);
     }
@@ -105,7 +103,7 @@ public class Main {
         return true;
     }
 
-    private static int checkSecureCommunication(Arguments args, CardManager cardMngr) {
+    private static int checkSecureCommunication(Arguments args, CardManager cardMngr) throws CardException {
         if (secureCommunication && args.pairingSecret != null)
             System.out.println("You do not need to provide the pairing secret for this session anymore");
 
@@ -126,9 +124,7 @@ public class Main {
 
             if (!openSecureChannel(cardMngr, args, secure))
                 return 1;
-        } catch (InvalidKeyException e) {
-            System.out.println("Invalid pairing secret! Secure channel could not be opened");
-        } catch (CardException | NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
+        } catch (InvalidKeyException | NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
             System.out.println("HW requirements were not satisfied");
         }
         secureCommunication = true;
