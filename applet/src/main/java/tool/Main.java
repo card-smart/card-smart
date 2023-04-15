@@ -171,6 +171,11 @@ public class Main {
     }
 
     private static byte[] processResponse(ResponseAPDU response) throws CardWrongStateException, CardErrorException {
+        if (response.getSW() != 0x9000) {
+            processSW(response.getSW());
+            return null;
+        }
+
         if (secureCommunication) {
             byte[] res = secure.getResponseData(response.getData());
             int len = res.length;
@@ -181,11 +186,6 @@ public class Main {
                 return null;
             }
             return Arrays.copyOf(res, len - 2);
-        }
-
-        if (response.getSW() != 0x9000) {
-            processSW(response.getSW());
-            return null;
         }
 
         return response.getData();
@@ -209,10 +209,7 @@ public class Main {
 
     private static boolean cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException, CardWrongStateException, CardErrorException {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x22, args.PIN));
-        if (response.getSW() != 0x9000) {
-            processSW(response.getSW());
-            return false;
-        }
+        processResponse(response);
         return true;
     }
 
