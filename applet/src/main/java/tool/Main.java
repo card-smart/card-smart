@@ -134,6 +134,9 @@ public class Main {
         }
         secureCommunication = true;
 
+        if (args.init) // we do not want to continue now, command was processed
+            return 1;
+
         return 0;
     }
 
