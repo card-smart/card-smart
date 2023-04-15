@@ -91,6 +91,7 @@ public class CommandParser implements CommandLineParser {
             return false;
         }
 
+        // this is validated elsewhere, lets remove it:
         if (cmd.hasOption("t") && !cmd.hasOption("f")) {
             System.out.println("Command: `-t` needs to be used with `-f`");
             return false;
