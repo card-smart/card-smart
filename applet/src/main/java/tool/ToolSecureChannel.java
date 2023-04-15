@@ -49,10 +49,6 @@ public class ToolSecureChannel {
      */
     public byte[] prepareInitializationPayload(byte[] cardPublicKeyBytes, byte[] PIN, byte[] pairingSecret)
             throws NoSuchAlgorithmException, InvalidKeyException {
-        // this if can never happen at this point, lets remove it:
-        if (PIN.length != 10 || pairingSecret.length != 32) {
-            throw new IllegalArgumentException();
-        }
         // generate IV for encryption
         this.generateIV(iv);
         // derive simple encryption key and set it as key

@@ -94,13 +94,6 @@ public class Arguments {
             }
         }
 
-        if (cmd.hasOption('t') && !cmd.hasOption('f')) {
-            System.out.println("You need to provide path to pairing secret if you" +
-                    "wish to initialize the secure channel, you can do so by using" +
-                    "option '-f' or '--pairing-secret-file'");
-            return false;
-        }
-
         if (!validatePairingSecret())
             return false;
 

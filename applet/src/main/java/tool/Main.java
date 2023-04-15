@@ -9,7 +9,6 @@ import org.apache.commons.cli.CommandLine;
 import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import javax.sound.midi.SysexMessage;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -180,6 +179,7 @@ public class Main {
             }
             return Arrays.copyOf(res, len - 2);
         }
+
         if (response.getSW() != 0x9000) {
             processSW(response.getSW());
             return null;
