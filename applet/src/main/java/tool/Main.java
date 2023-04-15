@@ -173,17 +173,17 @@ public class Main {
         return true;
     }
 
-    private static int cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException {
+    private static boolean cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x22, args.PIN));
         if (response.getSW() != 0x9000) {
-            System.out.print("Error verify pin TODO");
-            return 1;
+            System.out.println("Wrong PIN!");
+            return false;
         }
-        return 0;
+        return true;
     }
 
     private static void cardVerifyPIN(CardManager cardMngr, Arguments args) throws Exception {
-        if (cardVerifyPINOnly(cardMngr, args) != 0) {
+        if (!cardVerifyPINOnly(cardMngr, args)) {
             // TODO something here
             return;
         }
@@ -235,7 +235,7 @@ public class Main {
         }
     }
 
-    private static void openSecureChannel(CardManager cardMngr, Arguments args, ToolSecureChannel secure)
+    private static boolean openSecureChannel(CardManager cardMngr, Arguments args, ToolSecureChannel secure)
             throws CardException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException {
         // get public key from card
         ResponseAPDU getKeyResponse = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
@@ -247,7 +247,7 @@ public class Main {
             System.out.println("Success to open SC!");
         else {
             System.out.println("Failed to open SC!");
-            return;
+            return false;
         }
         secure.createSharedSecrets(args.pairingSecret, cardPublicKeyBytes, openSCResponse.getData());
         return true;
