@@ -3,41 +3,38 @@
 ## Capabilites
 
 ### 1. Store name-value pairs
-* Filesystem class
-* Named files as buffers for secret data
-* PIN protected
+* `FileSystem` class
+* Named records as buffers for secret data
+* PIN protected access
 
 ### 2. Reading all names 
 * names stored in filesystem
 * no PIN protection needed
-* data sent as bytes, '\0' divider
+* data sent as bytes
 * data in LV (length-value) structure
-  * length = 1 byte
-  * data = name
+  * `length` of name = 1 byte
+  * `value` = name
 
 ### 3. Login
-* PIN policy setup in the applet
-* PIN is read from cmd option
-* login operation setup status in applet filesystem
-* checking remaining tries log out from current status
+* applet works with 10 byte PIN
+* PIN should be sent padded to the applet
+* login operation setup logged-in-status in applet filesystem
+* logged-in-status is reset by removing card
 * when no remaining tries left
   * secret data are erased from card
   * PIN set to default value
-* when sending PIN from the app
-  * pad PIN with 0's to get full length always (easier to check in the card)
   
 ### 4. Change PIN
-* checks PIN policy
-* needs PIN to be verificated
+* checks PIN length
+* needs applet to be in logged-in-state
 
 ### 5. Get secret value
 * authenticate with PIN
-* ask card, whether value with associated name exists and gets length of data
-* ask card for data
+* ask card for data related to the given name in filesystem
 
 ### 6. Store secret value
-* send data length to card (also with name?) to get verification, that such length can be stored
-* send data with the number of chunk
+* applet receives names and secret value
+* check for correct PIN and secret length
 
 ### 7. Delete secret value
 * send secret name to card, which should be deleted
@@ -46,19 +43,20 @@
 ### 8. Secure Channel
 * encryption
 * MAC tags
+* details in 
 
 ## Files
 ### CardSmartApplet.java
 #### Static information
 * definition of APDU instructions
 * PIN related contants
-  * inital PIN value = 0000 (in ASCII), padded to 10 bytes (pin max length)
+  * inital PIN value = 0000000000 (in ASCII) - 10 bytes
   * max tries = 5
-  * min length = 4
-  * max length = 10
 * storage related information
-  * max record size = 64 (`HMACKey`)
+  * max record size = 32 (`AESKey`)
   * max record number = 16
+  * min length of secret = 4
+  * max length of secret = 32
 * name policy
   * alphanumeric characters
   * min length of name = 4
@@ -68,20 +66,11 @@
 * create default OwnerPIN object
 * generate new asymmetric keys
 * secure channel instance
-* array to store secrets:
-```
-private short maxNumberOfRecords;
-MyObject[] myObjects = new MyObject[10];
-
-for (short i = 0; i < myObjects.length; i++) {
-    myObjects[i] = new MyObject();
-}
-```
+* array to store secrets
 
 ### Record.java
 * name
-* HMACKey object for secret data
-* getter
+* `AESKey` object for secret data
 * checksum to detect faults (`Checksum`)
 
 ### SecureChannel.java
@@ -90,12 +79,12 @@ for (short i = 0; i < myObjects.length; i++) {
 ---
 
 ## APDU Specification
-* CLA = `0xC0`
+* CLA = `0xB0`
 * **APDU STRUCTURE**
-  1. Unsecure = not encrypted nor MACed
+  1. _Unsecure_ = not encrypted nor MACed
       * data are sent directly over the insecure channel
       * APDU processed directly
-  2. Secure = encrypt-than-MAC
+  2. _Secure_ = encrypt-than-MAC
       * sending with special APDU, which means _we are sending encrypted data, which are along with the command_
       * encrypted data must be padded to 16B-blocks
   ```
@@ -105,43 +94,35 @@ for (short i = 0; i < myObjects.length; i++) {
   Secure APDU:
   CLA | INS | P1 | P2 | lc | encryted data [max 234 B] | MAC tag [16 B]
 
-  Inner encrypted data [max 239 B]:
-  INS | OP | lc | data [max 236 B]
-
   Unsecure RES:
   SW1 | SW2 | data [max 256 B]
 
   Secure RES:
   0x90 | 0x00 | encrypted(data [max 238] | SW1 | SW2) [max 240 B] | MAC tag [16 B]
   ```
-* **LV structure** (length-value)
-  ```
-  LEN | VALUE
-  ```
-  * by default, the `OP` in the inner APDU is only byte, it can be also used as `P1` while `P2 = 0x00`
+  * when error happens during encryption, decryption, MAC creation or MAC verify, corresponding error codes are returned directly **unencrypted**
 
 ## Applet states
 ### Uninitialized state
 * no pairing secret set
 * communication not via secure channel
 * trying to use initialized functionality should fail
-* when applet is initialized, all data are erased
+* when applet is initialized, all previously stored data are erased
 
 ### Initialized state
 * pairing secret is set and thus also secure channel can be opened
-* it is not possible to perform critical operations without secure channel (instructions are _disabled_)
+* it is not possible to perform operations without secure channel (instructions are _disabled_)
 
 ## APDU
 ### APDU for initialization of applet
 * not via secure channel
-* works both in initialized and uninitialized mode
 
 #### Get Card EC Public Key
 * works by initialized and uninitialized state
 
 | APDU | Values  |
 |------|---------|
-| CLA  | `0xC0`  |
+| CLA  | `0xB0`  |
 | INS  | `0x40`  |
 | P1   | `0x00`  |
 | P2   | `0x00`  |
@@ -149,10 +130,10 @@ for (short i = 0; i < myObjects.length; i++) {
 | DATA | ignored |
 | le   | ignored |
 
-| RES        | Data field      | Info            |
-|------------|-----------------|-----------------|
-| `0x9000`   | EC public key   |                 |
-| `0x6B00`   | none            | undefined error |
+| RES        | Data field      | Info                            |
+|------------|-----------------|---------------------------------|
+| `0x9000`   | EC public key   | 65 B, uncompressed point format |
+| `0x6B00`   | none            | undefined error                 |
 
 #### Card Init
 * setting initial PIN and pairingSecret for subsequent secure channel creation
@@ -164,66 +145,59 @@ for (short i = 0; i < myObjects.length; i++) {
 
 | APDU | Values                                              |
 |------|-----------------------------------------------------|
-| CLA  | `0xC0`                                              |
+| CLA  | `0xB0`                                              |
 | INS  | `0x41`                                              |
 | P0   | `0x00`                                              |
 | P1   | `0x00`                                              |
-| lc   | `0x7B` (65 + 16 + (10 + 32))                        |
+| lc   | `0x81` (65 + 16 + encrypted(10 + 32))               |
 | DATA | EC public key (LV encoded) + IV + encrypted payload |
 | le   | ignored                                             |
 
-| RES      | Data field | Info                                                                        |
-|----------|------------|-----------------------------------------------------------------------------|
-| `0x9000` | none       |                                                                             |
-| `0x6B00` | none       | error                                                                       |
-| `0x6B01` | none       | when trying to initialize already initialized applet without authentication |
-| `0x6B03` | none       | PIN policy not satisfied                                                    |
-| `0x6A03` | none       | ECDH failed                                                                 |
-| `0x6A04` | none       | Decryption failed                                                           |
+| RES      | Data field | Info                                                                            |
+|----------|------------|---------------------------------------------------------------------------------|
+| `0x9000` | none       |                                                                                 |
+| `0x6B00` | none       | error                                                                           |
+| `0x6B01` | none       | when trying to initialize already initialized applet without PIN authentication |
+| `0x6B03` | none       | PIN policy not satisfied                                                        |
+| `0x6B04` | none       | Reset of storage failed (could not delete data)                                 |
+| `0x6B07` | none       | Data length does not match (PIN length, pairing secret length, point length)    |
+| `0x6A03` | none       | ECDH failed                                                                     |
+| `0x6A01` | none       | Decryption failed                                                               |
 
 #### Open Secure Channel
 * works only in initialized mode
 | APDU | Values                             |
 | ---- | ---------------------------------- |
 | CLA  | `0xB0`                             |
-
 | INS  | `0x42`                             |
 | P0   | `0x00`                             |
 | P1   | `0x00`                             |
-| lc   | length of app public key           |
-| DATA | app public key                     |
+| lc   | `0x41`                             |
+| DATA | public key in uncompressed form    |
 
-| RES      | Data field  | Info                   |
-|----------|-------------|------------------------|
-| `0x9000` | `salt \ IV` | success                |
-| `0x6A03` |             | applet not initialized |
+| RES      | Data field  | Info                        |
+|----------|-------------|-----------------------------|
+| `0x9000` | `salt \ IV` | success                     |
+| `0x6A00` |             | Shared secret not generated |
+| `0x6A03` |             | ECDH failed                 |
+| `0x6A04` |             | applet not initialized      |
+| `0x6B00` |             | general error               |
 
 #### Close Secure Channel
-| APDU  | Values   |
-|-------|----------|
-| CLA   | `0xC0`   |
-| INS   | `0x43`   |
-| P0    | `0x00`   |
-| P1    | `0x00`   |
-| lc    | `0x00`   |
-| DATA  | ignored  |
+| APDU  | Values  |
+|-------|---------|
+| CLA   | `0xB0`  |
+| INS   | `0x43`  |
+| P0    | `0x00`  |
+| P1    | `0x00`  |
+| lc    | ignored |
+| DATA  | ignored |
 
-#### Secure channel error codes
-| RES       | Data field | Info                                                  |
-|-----------|------------|-------------------------------------------------------|
-| `0x9000`  |            | success                                               |
-| `0x6A00`  |            | decryption error                                      |
-| `0x6A01`  |            | MAC error                                             |
-| `0x6B00`  |            | error                                                 |
-| `0x6B01`  |            | not logged in                                         |
-| `0x6B02`  |            | out of tries, secret data deleted, PIN set to default |
-| `0x6B03`  |            | PIN policy not satisfied                              |
-| `0x6B04`  |            | storage                                               |
-| `0x6B05`  |            | name policy not satisfied                             |
-| `0x6B06`  |            | secret policy not satisfied                           |
-| `0x6B07`  |            | no such data                                          |
-| `0x6C00`  |            | unsupported CLA                                       |
-| `0x6C01`  |            | unsupported INS                                       |
+| RES      | Data field | Info                   |
+|----------|------------|------------------------|
+| `0x9000` |            | success                |
+| `0x6A04` |            | applet not initialized |
+| `0x6B00` |            | general error          |
 
 ### APDU for applet functionality
 * `INS` denotes instruction code for unsecure channel
@@ -243,8 +217,14 @@ for (short i = 0; i < myObjects.length; i++) {
 
 | RES      | Data field | Info                        |
 |----------|------------|-----------------------------|
-| `0x9000` |            |                             |
-| `0x6B00` |            | error                       |
+| `0x9000` |            | success                     |
+| `0x6B00` |            | general error               |
+| `0x6A01` |            | decryption error            |
+| `0x6A02` |            | MAC error                   |
+| `0x6A04` |            | applet not initialized      |
+| `0x6A05` |            | applet already initialized  |
+| `0x6A06` |            | encryption error            |
+| `0x6A07` |            | encrypted APDU length wrong |
 | `0x6B04` |            | storage error               |
 | `0x6B06` |            | secret policy not satisfied |
 
@@ -255,49 +235,64 @@ for (short i = 0; i < myObjects.length; i++) {
 | S_INS | `0x31`  |
 | P1    | `0x00`  |
 | P2    | `0x00`  |
-| lc    | `0x00`  |
+| lc    | ignored |
 | DATA  | ignored |
 
-| RES      | Data field            | Info  |
-|----------|-----------------------|-------|
-| `0x9000` | remaining tries [2 B] |       |
-| `0x6B00` |                       | error |
+| RES      | Data field            | Info                       |
+|----------|-----------------------|----------------------------|
+| `0x9000` | remaining tries [1 B] |                            |
+| `0x6A04` |                       | applet not initialized     |
+| `0x6A05` |                       | applet already initialized |
+| `0x6B00` |                       | general error              |
 
 ### PIN Verify
-| APDU  | Values               |
-|-------|----------------------|
-| INS   | `0x22`               |
-| S_INS | `0x32`               |
-| P1    | `0x00`               |
-| P2    | `0x00`               |
-| lc    | `0x10`               |
-| DATA  | PIN [padded to 16 B] |
+| APDU  | Values    |
+|-------|-----------|
+| INS   | `0x22`    |
+| S_INS | `0x32`    |
+| P1    | `0x00`    |
+| P2    | `0x00`    |
+| lc    | `0x0A`    |
+| DATA  | PIN value |
 
-| RES      | Data field | Info                                                  |
-|----------|------------|-------------------------------------------------------|
-| `0x9000` |            | success                                               |
-| `0x6B00` |            | error                                                 |
-| `0x6B01` |            | not logged in                                         |
-| `0x6B02` |            | out of tries, secret data deleted, PIN set to default |
+| RES      | Data field | Info                                                        |
+|----------|------------|-------------------------------------------------------------|
+| `0x9000` |            | success                                                     |
+| `0x6A01` |            | decryption error                                            |
+| `0x6A02` |            | MAC error                                                   |
+| `0x6A04` |            | applet not initialized                                      |
+| `0x6A05` |            | applet already initialized                                  |
+| `0x6A06` |            | encryption error                                            |
+| `0x6B00` |            | general error                                               |
+| `0x6B01` |            | not logged in                                               |
+| `0x6B02` |            | out of tries, secret data deleted, PIN set to default       |
+| `0x6B03` |            | PIN policy not satisfied, does not decrease remaining tries |
+| `0x6B04` |            | problem with resetting storage                              |
 
 ### Change PIN
-| APDU   | Values                   |
-|--------|--------------------------|
-| INS    | `0x23`                   |
-| S_INS  | `0x33`                   |
-| P1     | `0x00`                   |
-| P2     | `0x00`                   |
-| lc     | `0x10`                   |
-| DATA   | new pin [padded to 16 B] |
+| APDU  | Values  |
+|-------|---------|
+| INS   | `0x23`  |
+| S_INS | `0x33`  |
+| P1    | `0x00`  |
+| P2    | `0x00`  |
+| lc    | `0x0A`  |
+| DATA  | new pin |
 
-| RES      | Data field | Info                     |
-|----------|------------|--------------------------|
-| `0x9000` |            | success                  |
-| `0x6B00` |            | error                    |
-| `0x6B01` |            | not logged in            |
-| `0x6B03` |            | PIN policy not satisfied |
+| RES      | Data field | Info                       |
+|----------|------------|----------------------------|
+| `0x9000` |            | success                    |
+| `0x6A01` |            | decryption error           |
+| `0x6A02` |            | MAC error                  |
+| `0x6A04` |            | applet not initialized     |
+| `0x6A05` |            | applet already initialized |
+| `0x6A06` |            | encryption error           |
+| `0x6B00` |            | general error              |
+| `0x6B01` |            | not logged in              |
+| `0x6B03` |            | PIN policy not satisfied   |
 
-### Secure Get Value of Secret
+
+### Get Value of Secret
 | APDU  | Values                           |
 |-------|----------------------------------|
 | INS   | `0x24`                           |
@@ -307,12 +302,19 @@ for (short i = 0; i < myObjects.length; i++) {
 | lc    | `0xBB` length of the wanted name |
 | DATA  | name                             |
 
-| RES        | Data field  | Info     |
-|------------|-------------|----------|
-| `0x9000`   | secret data | success  |
-| `0x6B00`   |             | error    |
+| RES      | Data field  | Info                              |
+|----------|-------------|-----------------------------------|
+| `0x9000` | secret data | success                           |
+| `0x6A01` |             | decryption error                  |
+| `0x6A02` |             | MAC error                         |
+| `0x6A04` |             | applet not initialized            |
+| `0x6A05` |             | applet already initialized        |
+| `0x6A06` |             | encryption error                  |
+| `0x6B00` |             | general error                     |
+| `0x6B04` |             | storage error, probably not found |
+| `0x6B05` |             | name policy error                 |
 
-### Secure Store Value of Secret
+### Store Value of Secret
 | APDU  | Values                                                                        |
 |-------|-------------------------------------------------------------------------------|
 | INS   | `0x25`                                                                        |
@@ -321,13 +323,19 @@ for (short i = 0; i < myObjects.length; i++) {
 | lc    | `0xBB` length of name + secret data                                           |
 | DATA  | name length [1 B] \ name [max 10 B] \ secret length [1 B] \ secret [max 64 B] |
 
-| RES      | Data field | Info                        |
-|----------|------------|-----------------------------|
-| `0x9000` |            | success                     |
-| `0x6B00` |            | error                       |
-| `0x6B04` |            | storage                     |
-| `0x6B05` |            | name policy not satisfied   |
-| `0x6B06` |            | secret policy not satisfied |
+| RES      | Data field | Info                                |
+|----------|------------|-------------------------------------|
+| `0x9000` |            | success                             |
+| `0x6A01` |            | decryption error                    |
+| `0x6A02` |            | MAC error                           |
+| `0x6A04` |            | applet not initialized              |
+| `0x6A05` |            | applet already initialized          |
+| `0x6A06` |            | encryption error                    |
+| `0x6B00` |            | general error                       |
+| `0x6B01` |            | not logged in                       |
+| `0x6B04` |            | storage                             |
+| `0x6B05` |            | name policy not satisfied           |
+| `0x6B06` |            | secret or name policy not satisfied |
 
 
 ### Secure Delete Secret
@@ -340,9 +348,16 @@ for (short i = 0; i < myObjects.length; i++) {
 | lc    | `0xBB` length of name |
 | DATA  | name                  |
 
-| RES      | Data field | Info          |
-|----------|------------|---------------|
-| `0x9000` |            | success       |
-| `0x6B00` |            | error         |
-| `0x6B07` |            | no such data  |
+| RES      | Data field | Info                            |
+|----------|------------|---------------------------------|
+| `0x9000` |            | success                         |
+| `0x6A01` |            | decryption error                |
+| `0x6A02` |            | MAC error                       |
+| `0x6A04` |            | applet not initialized          |
+| `0x6A05` |            | applet already initialized      |
+| `0x6A06` |            | encryption error                |
+| `0x6B00` |            | general error                   |
+| `0x6B01` |            | not logged in                   |
+| `0x6B04` |            | storage error, secret not found |
+| `0x6B06` |            | name policy not satisfied       |
  
