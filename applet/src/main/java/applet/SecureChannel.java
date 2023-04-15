@@ -82,7 +82,7 @@ public class SecureChannel {
      *
      * @param newPairingSecret the pairing secret
      * @param offset start of the pairing secret in the newPairingSecret buffer
-     * @apiNote taken from status-keycard/SecureChannel.java
+     * @apiNote reimplemented from status-keycard/SecureChannel.java
      */
     public void initSecureChannel(byte[] newPairingSecret, short offset) {
         // set new pairing secret after init command in the applet
@@ -94,29 +94,31 @@ public class SecureChannel {
     /**
      * Decrypts the content of the APDU by symmetric key
      * @param apduBuffer the APDU buffer [123 B] = key length [1 B] | EC public key [65 B] | IV [16 B] | encrypted(PIN | pairingSecret) [42 B]
-     * @apiNote taken from status-keycard/SecureChannel.java
+     * @apiNote reimplemented from status-keycard/SecureChannel.java
      */
     public void initDecrypt(byte[] apduBuffer) {
-        // 1. initialize ECDH with card EC private key
-        ecdh.init(ecKeypair.getPrivate());
-
         try {
+            // 1. initialize ECDH with card EC private key
+            ecdh.init(ecKeypair.getPrivate());
             // 2. derive secret from card private key and incoming public key into secret buffer
             ecdh.generateSecret(apduBuffer, ISO7816.OFFSET_CDATA, (short) 65, secret, (short) 0);
         } catch(Exception e) {
+            this.eraseSecureChannel();
             ISOException.throwIt(RES_ERR_ECDH);
         }
         // 3. get IV from apduBuffer and prepare decryption
         short ivOffset = (short) (ISO7816.OFFSET_CDATA + 65);
-        encryptionKey.setKey(secret, (short) 0);
-        aesCbc.init(encryptionKey, Cipher.MODE_DECRYPT, apduBuffer, ivOffset, AES_BLOCK_SIZE);
 
-        // 4. decrypt payload data part in place
-        short payloadOffset = (short)(ivOffset + AES_BLOCK_SIZE);
         try {
+            encryptionKey.setKey(secret, (short) 0);
+            aesCbc.init(encryptionKey, Cipher.MODE_DECRYPT, apduBuffer, ivOffset, AES_BLOCK_SIZE);
+
+            // 4. decrypt payload data part in place
+            short payloadOffset = (short)(ivOffset + AES_BLOCK_SIZE);
             aesCbc.doFinal(apduBuffer, payloadOffset, (short) 48, apduBuffer, ISO7816.OFFSET_CDATA);
             apduBuffer[ISO7816.OFFSET_LC] = 123; // 65B public key + 16B IV + 10B PIN + 32B pairing secret
         } catch (Exception e) {
+            this.eraseSecureChannel();
             ISOException.throwIt(RES_ERR_DECRYPTION);
         }
     }
@@ -124,33 +126,47 @@ public class SecureChannel {
     /**
      * Open secure channel and generate AES keys for encryption and MAC
      * @param apdu CLA | INS | P1 | P2 | Lc | public key
-     * @apiNote taken from status-keycard/SecureChannel.java
+     * @apiNote reimplemented from status-keycard/SecureChannel.java
      */
     public void openSecureChannel(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        // 1. initialize ECDH with card's private key
-        ecdh.init(ecKeypair.getPrivate());
-        short len;
+        short len = 0;
 
         try {
+            // 1. initialize ECDH with card's private key
+            ecdh.init(ecKeypair.getPrivate());
             // 2. get derived secret from card's private key and tool's public key
             len = ecdh.generateSecret(apduBuffer, ISO7816.OFFSET_CDATA, (short) 65, secret, (short) 0);
-        } catch(Exception e) {
-            ISOException.throwIt(RES_ERR_SECURE_CHANNEL);
-            return;
+        } catch (Exception e) {
+            this.closeSecureChannel();
+            ISOException.throwIt(RES_ERR_ECDH);
         }
-        // 3. generate random salt [32 B] and IV [16 B] for tool
-        random.generateData(apduBuffer, (short) 0, (short) (PAIRING_SECRET_LENGTH + AES_BLOCK_SIZE));
-        // 4. generate hash from derived secret, pairing secret and salt
-        sha512.update(secret, (short) 0, len);
-        sha512.update(pairingSecret, (short) 0, PAIRING_SECRET_LENGTH);
-        sha512.doFinal(apduBuffer, (short) 0, PAIRING_SECRET_LENGTH, secret, (short) 0);
-        // 5. set symmetric keys and reset secret buffer
-        encryptionKey.setKey(secret, (short) 0);
-        macKey.setKey(secret, AES_KEY_LENGTH);
-        Util.arrayFillNonAtomic(secret, (short) 0, PAIRING_SECRET_LENGTH, (byte) 0);
-        // 6. set generated IV as IV for next decryption
-        Util.arrayCopyNonAtomic(apduBuffer, PAIRING_SECRET_LENGTH, iv, (short) 0, AES_BLOCK_SIZE);
+
+        try {
+
+            // 3. generate random salt [32 B] and IV [16 B] for tool
+            random.generateData(apduBuffer, (short) 0, (short) (PAIRING_SECRET_LENGTH + AES_BLOCK_SIZE));
+            // 4. generate hash from derived secret, pairing secret and salt
+            sha512.update(secret, (short) 0, len);
+            sha512.update(pairingSecret, (short) 0, PAIRING_SECRET_LENGTH);
+            sha512.doFinal(apduBuffer, (short) 0, PAIRING_SECRET_LENGTH, secret, (short) 0);
+            // 5. set symmetric keys and reset secret buffer
+            encryptionKey.setKey(secret, (short) 0);
+            macKey.setKey(secret, AES_KEY_LENGTH);
+        } catch(Exception e) {
+            this.closeSecureChannel();
+            ISOException.throwIt(RES_ERR_SECURE_CHANNEL);
+        }
+
+        try {
+            // set secret bytes to zero
+            Util.arrayFillNonAtomic(secret, (short) 0, (short) (PAIRING_SECRET_LENGTH + AES_BLOCK_SIZE), (byte) 0);
+            // 6. set generated IV as IV for next decryption
+            Util.arrayCopyNonAtomic(apduBuffer, PAIRING_SECRET_LENGTH, iv, (short) 0, AES_BLOCK_SIZE);
+        } catch (Exception e) {
+            ISOException.throwIt(RES_ERR_GENERAL);
+        }
+
         // 7. send salt and IV to tool
         apdu.setOutgoingAndSend((short) 0, (short) (PAIRING_SECRET_LENGTH + AES_BLOCK_SIZE));
     }
@@ -163,12 +179,17 @@ public class SecureChannel {
      * @param macOffset  position in buffer where tag starts
      */
     private boolean verifyMAC(byte[] apduBuffer, short dataLength, short macOffset) {
-        // 1. initialize MAC algorithm with AES MAC secret key
-        mac.init(macKey, Signature.MODE_VERIFY);
-        // 2. load data (including instruction bytes) and verify the tag
-        mac.update(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA);
-        mac.update(iv, (short) 0, (short) (AES_BLOCK_SIZE - ISO7816.OFFSET_CDATA));
-        return mac.verify(apduBuffer, ISO7816.OFFSET_CDATA, dataLength, apduBuffer, macOffset, MAC_SIZE);
+        try {
+            // 1. initialize MAC algorithm with AES MAC secret key
+            mac.init(macKey, Signature.MODE_VERIFY);
+            // 2. load data (including instruction bytes) and verify the tag
+            mac.update(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA);
+            mac.update(iv, (short) 0, (short) (AES_BLOCK_SIZE - ISO7816.OFFSET_CDATA));
+            return mac.verify(apduBuffer, ISO7816.OFFSET_CDATA, dataLength, apduBuffer, macOffset, MAC_SIZE);
+        } catch (Exception e) {
+            ISOException.throwIt(RES_ERR_MAC);
+        }
+        return false;
     }
 
     /**
@@ -187,7 +208,7 @@ public class SecureChannel {
         // 3. verify MAC tag
         short macOffset = (short) (ISO7816.OFFSET_CDATA + (Lc - MAC_SIZE));
         if (!verifyMAC(apduBuffer, payloadLength, macOffset)) {
-            closeSecureChannel();
+            this.closeSecureChannel();
             ISOException.throwIt(RES_ERR_MAC);
         }
         if (payloadLength == 0) {
@@ -221,10 +242,14 @@ public class SecureChannel {
         if (responseLength % AES_BLOCK_SIZE != 0) {
             ISOException.throwIt(RES_ERR_MAC);
         }
-        // 2. set MAC key for creating a tag
-        mac.init(macKey, Signature.MODE_SIGN);
-        // 3. load data & store tag just after the encrypted data
-        mac.sign(responseBuffer, responseOffset, responseLength, responseBuffer, (short) (responseOffset + responseLength));
+        try {
+            // 2. set MAC key for creating a tag
+            mac.init(macKey, Signature.MODE_SIGN);
+            // 3. load data & store tag just after the encrypted data
+            mac.sign(responseBuffer, responseOffset, responseLength, responseBuffer, (short) (responseOffset + responseLength));
+        } catch (Exception e) {
+            ISOException.throwIt(RES_ERR_MAC);
+        }
     }
 
     /**
@@ -263,7 +288,11 @@ public class SecureChannel {
     public void closeSecureChannel() {
         encryptionKey.clearKey();
         macKey.clearKey();
-        Util.arrayFillNonAtomic(iv, (short) 0, AES_BLOCK_SIZE, (byte) 0);
+        try {
+            Util.arrayFillNonAtomic(iv, (short) 0, AES_BLOCK_SIZE, (byte) 0);
+        } catch (Exception e) {
+            ISOException.throwIt(RES_ERR_GENERAL);
+        }
     }
 
     /**

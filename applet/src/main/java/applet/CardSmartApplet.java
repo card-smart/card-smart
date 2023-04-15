@@ -263,12 +263,16 @@ public class CardSmartApplet extends Applet {
         // 2. decrypt apduBuffer to obtain PIN and pairingSecret for secure channel
         secureChannel.initDecrypt(apduBuffer);
 
-        // 3. get PIN of decrypted apduBuffer
-        pin.update(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN);
-
-        // 4. set pairingSecret and update current card EC keypair
+        // 3. set pairingSecret and update current card EC keypair
         secureChannel.initSecureChannel(apduBuffer, (short) (ISO7816.OFFSET_CDATA + PIN_MAX_LEN));
 
+        // 4. get PIN of decrypted apduBuffer
+        try {
+            pin.update(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN);
+        } catch (PINException e) {
+            secureChannel.eraseSecureChannel();
+            ISOException.throwIt(RES_ERR_PIN_POLICY);
+        }
         // 5. set applet into initialized state
         this.setAppletInitialized(true);
     }
@@ -282,8 +286,7 @@ public class CardSmartApplet extends Applet {
      * @apiNote works in initialized state
      */
     void openSecureChannel(APDU apdu) {
-        byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
+        apdu.setIncomingAndReceive();
 
         // 1. if applet is not initialized, throw error
         if (!this.getAppletInitialized()) {
@@ -378,6 +381,10 @@ public class CardSmartApplet extends Applet {
      * @apiNote works in both uninitialized and initialized state
      */
     short verifyPIN(byte[] apduBuffer) {
+        if (apduBuffer[ISO7816.OFFSET_LC] != PIN_MAX_LEN) {
+            return RES_ERR_PIN_POLICY;
+        }
+
         if(!this.pin.check(apduBuffer, ISO7816.OFFSET_CDATA, PIN_MAX_LEN)) {
             byte tries = this.pin.getTriesRemaining();
             if (tries == 0) {
@@ -400,7 +407,7 @@ public class CardSmartApplet extends Applet {
      */
     void unsecureVerifyPIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
+        apdu.setIncomingAndReceive();
 
         if (this.getAppletInitialized()) {
             ISOException.throwIt(RES_ERR_INITIALIZED);
@@ -428,7 +435,7 @@ public class CardSmartApplet extends Applet {
      */
     void secureVerifyPIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
+        apdu.setIncomingAndReceive();
 
         if (!this.getAppletInitialized()) {
             ISOException.throwIt(RES_ERR_UNINITIALIZED);
@@ -441,7 +448,7 @@ public class CardSmartApplet extends Applet {
             try {
                 this.hardReset();
             } catch (Exception e) {
-                SW = RES_ERR_STORAGE;
+                ISOException.throwIt(RES_ERR_GENERAL);
             }
         }
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, length);
@@ -461,12 +468,15 @@ public class CardSmartApplet extends Applet {
             return RES_ERR_NOT_LOGGED;
         }
         /* Check that PIN has correct length = maximal length */
-        // TODO: Add better check for PIN policy
         if (dataLength != PIN_MAX_LEN) {
             return RES_ERR_PIN_POLICY;
         }
         /* Set new user PIN */
-        pin.update(apduBuffer, ISO7816.OFFSET_CDATA, (byte) dataLength);
+        try {
+            pin.update(apduBuffer, ISO7816.OFFSET_CDATA, (byte) dataLength);
+        } catch (Exception e) {
+            return RES_ERR_PIN_POLICY;
+        }
         return RES_SUCCESS;
     }
 
@@ -479,7 +489,7 @@ public class CardSmartApplet extends Applet {
      */
     void unsecureChangePIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
+        apdu.setIncomingAndReceive();
         if (this.getAppletInitialized()) {
             ISOException.throwIt(RES_ERR_INITIALIZED);
         }
@@ -498,7 +508,7 @@ public class CardSmartApplet extends Applet {
      */
     void secureChangePIN(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
+        apdu.setIncomingAndReceive();
         if (!this.getAppletInitialized()) {
             ISOException.throwIt(RES_ERR_UNINITIALIZED);
         }
@@ -544,7 +554,7 @@ public class CardSmartApplet extends Applet {
      */
     void unsecureStoreSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
+        apdu.setIncomingAndReceive();
         if (this.getAppletInitialized()) {
             ISOException.throwIt(RES_ERR_INITIALIZED);
         }
@@ -562,7 +572,7 @@ public class CardSmartApplet extends Applet {
      */
     void secureStoreSecret(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        short dataLength = apdu.setIncomingAndReceive();
+        apdu.setIncomingAndReceive();
         if (!this.getAppletInitialized()) {
             ISOException.throwIt(RES_ERR_UNINITIALIZED);
         }
