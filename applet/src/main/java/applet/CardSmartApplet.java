@@ -436,6 +436,7 @@ public class CardSmartApplet extends Applet {
 
         secureChannel.decryptAPDU(apduBuffer);
         short SW = verifyPIN(apduBuffer);
+        short length = secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
         if (SW == RES_ERR_RESET) {
             try {
                 this.hardReset();
@@ -443,7 +444,6 @@ public class CardSmartApplet extends Applet {
                 SW = RES_ERR_STORAGE;
             }
         }
-        short length = secureChannel.encryptResponse(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA, SW);
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, length);
     }
 
@@ -781,5 +781,6 @@ public class CardSmartApplet extends Applet {
     private void hardReset() throws StorageException {
         this.secureChannel.eraseSecureChannel();
         this.resetToDefault();
+        this.setAppletInitialized(false);
     }
 }

@@ -2,6 +2,7 @@ package tests;
 
 import cz.muni.fi.crocs.rcard.client.CardManager;
 import cz.muni.fi.crocs.rcard.client.CardType;
+import org.junit.Assert;
 import org.junit.jupiter.api.*;
 import tool.ToolSecureChannel;
 
@@ -212,5 +213,77 @@ public class SecureChannelTest extends BaseTest {
         cmd = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, PIN);
         responseAPDU = card.transmit(cmd);
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        byte[] response = secure.getResponseData(responseAPDU.getData());
+        Assertions.assertArrayEquals(new byte[]{-112, 0}, response);
+    }
+
+    @Test
+    public void uninitAfterWrongPINs() throws Exception {
+        byte[] PIN = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+        byte[] pairingSecret = new byte[32];
+        ToolSecureChannel secure = new ToolSecureChannel();
+        CardManager card = connect();
+
+        CommandAPDU cmd = new CommandAPDU(0xB0, 0x40, 0x00, 0x00);
+        ResponseAPDU responseAPDU = card.transmit(cmd);
+        byte[] cardPublicKeyBytes = responseAPDU.getData();
+
+        try {
+            byte[] payload = secure.prepareInitializationPayload(cardPublicKeyBytes, PIN, pairingSecret);
+            cmd = new CommandAPDU(0xB0, 0x41, 0x00, 0x00, payload);
+            responseAPDU = card.transmit(cmd);
+        } catch (Exception e) {
+            assert(false);
+        }
+
+        // get fresh card key
+        cmd = new CommandAPDU(0xB0, 0x40, 0x00, 0x00);
+        responseAPDU = card.transmit(cmd);
+        cardPublicKeyBytes = responseAPDU.getData();
+        byte[] publicKeyBytes = secure.getFreshPublicKeyBytes();
+        cmd = new CommandAPDU(0xB0, 0x42, 0x00, 0x00, publicKeyBytes);
+        responseAPDU = card.transmit(cmd);
+        secure.createSharedSecrets(pairingSecret, cardPublicKeyBytes, responseAPDU.getData());
+
+        // 1. attempt
+        byte[] wrongPIN = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
+        cmd = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, wrongPIN);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        byte[] response = secure.getResponseData(responseAPDU.getData());
+        Assertions.assertArrayEquals(new byte[]{107, 1}, response); // not logged in
+
+        // 2. attempt
+        cmd = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, wrongPIN);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        response = secure.getResponseData(responseAPDU.getData());
+        Assertions.assertArrayEquals(new byte[]{107, 1}, response); // not logged in
+
+        // 3. attempt
+        cmd = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, wrongPIN);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        response = secure.getResponseData(responseAPDU.getData());
+        Assertions.assertArrayEquals(new byte[]{107, 1}, response); // not logged in
+
+        // 4. attempt
+        cmd = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, wrongPIN);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        response = secure.getResponseData(responseAPDU.getData());
+        Assertions.assertArrayEquals(new byte[]{107, 1}, response); // not logged in
+
+        // 5. attempt
+        cmd = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, wrongPIN);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        response = secure.getResponseData(responseAPDU.getData());
+        Assertions.assertArrayEquals(new byte[]{107, 2}, response); // card reset
+
+        // card should be reset into uninitialized state
+        cmd = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, wrongPIN);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertEquals(0x6A04, responseAPDU.getSW());
     }
 }
