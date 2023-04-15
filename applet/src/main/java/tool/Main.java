@@ -287,6 +287,73 @@ public class Main {
         return true;
     }
 
+    private static void processSW(int sw) throws CardErrorException, CardWrongStateException {
+        final short RES_SUCCESS = (short)0x9000;
+        /* Secure channel */
+        final short RES_ERR_SECURE_CHANNEL = (short)0x6A00;
+        final short RES_ERR_DECRYPTION = (short)0x6A01;
+        final short RES_ERR_MAC = (short)0x6A02;
+        final short RES_ERR_ECDH = (short)0x6A03;
+        final short RES_ERR_UNINITIALIZED = (short)0x6A04;
+        final short RES_ERR_INITIALIZED = (short)0x6A05;
+        final short RES_ERR_ENCRYPTION = (short)0x6A06;
+        final short RES_ERR_DATA_LENGTH = (short)0x6A07;
+        /* Operations */
+        final short RES_ERR_GENERAL = (short)0x6B00;
+        final short RES_ERR_NOT_LOGGED = (short)0x6B01;
+        final short RES_ERR_RESET = (short)0x6B02;
+        final short RES_ERR_PIN_POLICY = (short)0x6B03;
+        final short RES_ERR_STORAGE = (short)0x6B04;
+        final short RES_ERR_NAME_POLICY = (short)0x6B05;
+        final short RES_ERR_SECRET_POLICY = (short)0x6B06;
+        final short RES_ERR_INPUT_DATA = (short)0x6B07;
+        /* Unsupported instructions */
+        final short RES_UNSUPPORTED_CLA = (short)0x6C00;
+        final short RES_UNSUPPORTED_INS = (short)0x6C01;
+
+        switch (sw) {
+            case RES_SUCCESS:
+                return;
+            case RES_ERR_SECURE_CHANNEL:
+                throw new CardErrorException("Problem with opening of secure channel.");
+            case RES_ERR_DECRYPTION:
+                throw new CardErrorException("Problem with APDU decryption.");
+            case RES_ERR_MAC:
+                throw new CardErrorException("Problem with MAC.");
+            case RES_ERR_ECDH:
+                throw new CardErrorException("Problem with ECDH.");
+            case RES_ERR_UNINITIALIZED:
+                throw new CardWrongStateException("Secure operation was executed but applet is not initialized.");
+            case RES_ERR_INITIALIZED:
+                throw new CardWrongStateException("Unsecure operation was executed but applet is initialized.");
+            case RES_ERR_ENCRYPTION:
+                throw new CardErrorException("Problem with response encryption.");
+            case RES_ERR_DATA_LENGTH:
+                throw new CardErrorException("Wrong length of encrypted data.");
+            case RES_ERR_NOT_LOGGED:
+                throw new CardWrongStateException("User is not authenticated via PIN.");
+            case RES_ERR_RESET:
+                throw new CardWrongStateException("No remaining tries to verify PIN, card is reset.");
+            case RES_ERR_PIN_POLICY:
+                throw new CardErrorException("PIN policy was not satisfied.");
+            case RES_ERR_STORAGE:
+                throw new CardErrorException("Problem with storage.");
+            case RES_ERR_NAME_POLICY:
+                throw new CardErrorException("Name policy was not satisfied.");
+            case RES_ERR_SECRET_POLICY:
+                throw new CardErrorException("Secret policy was not satisfied.");
+            case RES_ERR_INPUT_DATA:
+                throw new CardErrorException("Wrong length of data at applet initialization.");
+            case RES_UNSUPPORTED_CLA:
+                throw new CardErrorException("Unsupported CLA byte in received APDU.");
+            case RES_UNSUPPORTED_INS:
+                throw new CardErrorException("Unsupported INS byte in received APDU.");
+            case RES_ERR_GENERAL:
+            default:
+                throw new CardErrorException("Unexpected problem occurred.");
+        }
+    }
+
     private static void demo(ToolSecureChannel secure) throws Exception {
         // connect to card
         final CardManager cardMngr = getCardMngr();
@@ -368,73 +435,6 @@ public class Main {
             System.out.print("Get all names empty successful!\n");
         } else {
             System.out.print("Get all names not empty successful!\n");
-        }
-    }
-
-    private static void processSW(int sw) throws CardErrorException, CardWrongStateException {
-        final short RES_SUCCESS = (short)0x9000;
-        /* Secure channel */
-        final short RES_ERR_SECURE_CHANNEL = (short)0x6A00;
-        final short RES_ERR_DECRYPTION = (short)0x6A01;
-        final short RES_ERR_MAC = (short)0x6A02;
-        final short RES_ERR_ECDH = (short)0x6A03;
-        final short RES_ERR_UNINITIALIZED = (short)0x6A04;
-        final short RES_ERR_INITIALIZED = (short)0x6A05;
-        final short RES_ERR_ENCRYPTION = (short)0x6A06;
-        final short RES_ERR_DATA_LENGTH = (short)0x6A07;
-        /* Operations */
-        final short RES_ERR_GENERAL = (short)0x6B00;
-        final short RES_ERR_NOT_LOGGED = (short)0x6B01;
-        final short RES_ERR_RESET = (short)0x6B02;
-        final short RES_ERR_PIN_POLICY = (short)0x6B03;
-        final short RES_ERR_STORAGE = (short)0x6B04;
-        final short RES_ERR_NAME_POLICY = (short)0x6B05;
-        final short RES_ERR_SECRET_POLICY = (short)0x6B06;
-        final short RES_ERR_INPUT_DATA = (short)0x6B07;
-        /* Unsupported instructions */
-        final short RES_UNSUPPORTED_CLA = (short)0x6C00;
-        final short RES_UNSUPPORTED_INS = (short)0x6C01;
-
-        switch (sw) {
-            case RES_SUCCESS:
-                return;
-            case RES_ERR_SECURE_CHANNEL:
-                throw new CardErrorException("Problem with opening of secure channel.");
-            case RES_ERR_DECRYPTION:
-                throw new CardErrorException("Problem with APDU decryption.");
-            case RES_ERR_MAC:
-                throw new CardErrorException("Problem with MAC.");
-            case RES_ERR_ECDH:
-                throw new CardErrorException("Problem with ECDH.");
-            case RES_ERR_UNINITIALIZED:
-                throw new CardWrongStateException("Secure operation was executed but applet is not initialized.");
-            case RES_ERR_INITIALIZED:
-                throw new CardWrongStateException("Unsecure operation was executed but applet is initialized.");
-            case RES_ERR_ENCRYPTION:
-                throw new CardErrorException("Problem with response encryption.");
-            case RES_ERR_DATA_LENGTH:
-                throw new CardErrorException("Wrong length of encrypted data.");
-            case RES_ERR_NOT_LOGGED:
-                throw new CardWrongStateException("User is not authenticated via PIN.");
-            case RES_ERR_RESET:
-                throw new CardWrongStateException("No remaining tries to verify PIN, card is reset.");
-            case RES_ERR_PIN_POLICY:
-                throw new CardErrorException("PIN policy was not satisfied.");
-            case RES_ERR_STORAGE:
-                throw new CardErrorException("Problem with storage.");
-            case RES_ERR_NAME_POLICY:
-                throw new CardErrorException("Name policy was not satisfied.");
-            case RES_ERR_SECRET_POLICY:
-                throw new CardErrorException("Secret policy was not satisfied.");
-            case RES_ERR_INPUT_DATA:
-                throw new CardErrorException("Wrong length of data at applet initialization.");
-            case RES_UNSUPPORTED_CLA:
-                throw new CardErrorException("Unsupported CLA byte in received APDU.");
-            case RES_UNSUPPORTED_INS:
-                throw new CardErrorException("Unsupported INS byte in received APDU.");
-            case RES_ERR_GENERAL:
-            default:
-                throw new CardErrorException("Unexpected problem occurred.");
         }
     }
 }
