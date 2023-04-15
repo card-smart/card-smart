@@ -97,6 +97,9 @@ public class CommandParser implements CommandLineParser {
             return false;
         }
 
+        if (cmd.hasOption("h"))
+            printHelp();
+
         return true;
     }
 

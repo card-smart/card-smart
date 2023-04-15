@@ -80,6 +80,8 @@ public class Arguments {
 
     public boolean validateInput() throws IOException {
         // here we want to validate length of given inputs and stuff
+        if (cmd.hasOption('h')) //there is no future for this option
+            return false;
 
         if (cmd.hasOption('i')) {
             try {
