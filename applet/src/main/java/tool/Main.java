@@ -122,9 +122,9 @@ public class Main {
 
         try {
             if (args.init)
-                initializeApplet(cardMngr, args, secure);
+                initializeApplet(cardMngr, args);
 
-            if (!openSecureChannel(cardMngr, args, secure))
+            if (!openSecureChannel(cardMngr, args))
                 return 1;
         } catch (InvalidKeyException | NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
             System.out.println("HW requirements were not satisfied");
@@ -254,7 +254,7 @@ public class Main {
         return response.getData();
     }
 
-    private static void initializeApplet(CardManager cardMngr, Arguments args, ToolSecureChannel secure)
+    private static void initializeApplet(CardManager cardMngr, Arguments args)
             throws CardException, NoSuchAlgorithmException, InvalidKeyException, CardWrongStateException, CardErrorException {
         byte[] cardPublicKeyBytes = cardGetPublicKey(cardMngr);
         // create payload for APDU: publicKey [65 B] | IV [16 B] | encrypted [48 B]
@@ -269,7 +269,7 @@ public class Main {
         }
     }
 
-    private static boolean openSecureChannel(CardManager cardMngr, Arguments args, ToolSecureChannel secure)
+    private static boolean openSecureChannel(CardManager cardMngr, Arguments args)
             throws CardException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException {
         // get public key from card
         ResponseAPDU getKeyResponse = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
@@ -366,8 +366,8 @@ public class Main {
             return;
         }
         /* Initialize applet workflow */
-        initializeApplet(cardMngr, demoArguments, secure);
-        openSecureChannel(cardMngr, demoArguments, secure);
+        initializeApplet(cardMngr, demoArguments);
+        openSecureChannel(cardMngr, demoArguments);
         /* PIN verify demo */
         CommandAPDU verifyAPDU = secure.prepareSecureAPDU((byte) 0xB0, (byte) 0x32, demoArguments.PIN);
         ResponseAPDU verifyResponse = cardMngr.transmit(verifyAPDU);
