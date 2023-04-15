@@ -57,7 +57,7 @@ public class CommandParser implements CommandLineParser {
             return false;
         }
 
-        if ((cmd.hasOption("v") || cmd.hasOption("c")
+        if ((cmd.hasOption("v") || cmd.hasOption("c") || cmd.hasOption("t")
                 || cmd.hasOption("s") || cmd.hasOption("d"))
                 && !cmd.hasOption("p")) {
             Option[] opt = cmd.getOptions();

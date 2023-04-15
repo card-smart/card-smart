@@ -16,6 +16,7 @@ public class Arguments {
     public String secretFile;
     public byte[] newPIN;
     public boolean loginNeeded = true;
+    public boolean init = false;
     public byte[] pairingSecret;
     public String pairingSecretFile;
 
@@ -24,6 +25,9 @@ public class Arguments {
 
         if (cmd.hasOption('l')) {
             loginNeeded = false;
+        }
+        if (cmd.hasOption('t')) {
+            init = true;
         }
         if (cmd.hasOption('p')) {
             PIN = cmd.getOptionValue('p').getBytes();
@@ -49,17 +53,23 @@ public class Arguments {
     }
 
     private boolean validatePairingSecret() {
-        if (cmd.hasOption('f')) {
-            try {
-                pairingSecret = Files.readAllBytes(Paths.get(cmd.getOptionValue('f')));
-            } catch (IOException e) {
-                pairingSecret = ToolSecureChannel.createPairingSecret(pairingSecretFile);
-                return pairingSecret != null;
-            }
-            if (pairingSecret.length != 32) {
-                System.out.println("Pairing secret needs to be 32 bytes long!");
+        if (!cmd.hasOption('f'))
+            return true;
+
+        try {
+            pairingSecret = Files.readAllBytes(Paths.get(cmd.getOptionValue('f')));
+        } catch (IOException e) {
+            if (!cmd.hasOption('t')) {
+                System.out.println("You need to use option '-t' or '--init' if" +
+                        "you want to create the pairing secret.");
                 return false;
             }
+            pairingSecret = ToolSecureChannel.createPairingSecret(pairingSecretFile);
+            return pairingSecret != null;
+        }
+        if (pairingSecret.length != 32) {
+            System.out.println("Pairing secret needs to be 32 bytes long!");
+            return false;
         }
         return true;
     }
@@ -80,6 +90,13 @@ public class Arguments {
             if (secretValue.length < 1) {
                 return false;
             }
+        }
+
+        if (cmd.hasOption('t') && !cmd.hasOption('f')) {
+            System.out.println("You need to provide path to pairing secret if you" +
+                    "wish to initialize the secure channel, you can do so by using" +
+                    "option '-f' or '--pairing-secret-file'");
+            return false;
         }
 
         if (!validatePairingSecret())
