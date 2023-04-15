@@ -69,27 +69,8 @@ public class Main {
         if (cardMngr == null)
             return;
 
-        if (secureCommunication && args.pairingSecret != null)
-            System.out.println("You do not need to provide the pairing secret for this session anymore");
-
-        if (!secureCommunication && args.pairingSecret != null) {
-            try {
-                secure = new ToolSecureChannel();
-            } catch (Exception e) {
-                System.out.println("We are sorry, but your HW does not support the required" +
-                        "security algorithms or correct version of them");
-                return;
-            }
-            if (args.init)
-                initializeApplet(cardMngr, args, secure);
-
-            if (!openSecureChannel(cardMngr, args, secure))
-                return;
-            secureCommunication = true;
-
-            if (args.init)
-                return;
-        }
+        if (checkSecureCommunication(args, cardMngr) != 0)
+            return;
 
         if (!checkPIN(args, cardMngr))
             return;
@@ -124,6 +105,36 @@ public class Main {
         return true;
     }
 
+    private static int checkSecureCommunication(Arguments args, CardManager cardMngr) {
+        if (secureCommunication && args.pairingSecret != null)
+            System.out.println("You do not need to provide the pairing secret for this session anymore");
+
+        if (secureCommunication || args.pairingSecret == null)
+            return 0;
+
+        try {
+            secure = new ToolSecureChannel();
+        } catch (Exception e) {
+            System.out.println("We are sorry, but your HW does not support the required" +
+                        "security algorithms or correct version of them");
+            return 1;
+        }
+
+        try {
+            if (args.init)
+                initializeApplet(cardMngr, args, secure);
+
+            if (!openSecureChannel(cardMngr, args, secure))
+                return 1;
+        } catch (InvalidKeyException e) {
+            System.out.println("Invalid pairing secret! Secure channel could not be opened");
+        } catch (CardException | NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
+            System.out.println("HW requirements were not satisfied");
+        }
+        secureCommunication = true;
+
+        return 0;
+    }
 
     /**
      * Returns CardManager instance of real or simulated card.
