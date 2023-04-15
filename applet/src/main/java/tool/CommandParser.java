@@ -19,7 +19,7 @@ public class CommandParser implements CommandLineParser {
         options.addOption(buildOption("p", "pin", "pin", "use PIN"));
         options.addOption(buildOption("f", "pairing-secret-file", "path",
                 "file path to store the pairing secret for secure channel," +
-                "if file does not exist then the file and pairing secret will be created"));
+                " if file does not exist then the file and pairing secret will be created"));
         options.addOption(buildOption("c", "change-pin", "pin", "change PIN"));
         options.addOption(buildOption("s", "store-secret", "name", "store secret from input file"));
         options.addOption(buildOption("i", "in-file", "file", "input file"));
@@ -82,8 +82,8 @@ public class CommandParser implements CommandLineParser {
 
         if (cmd.hasOption("t") && !cmd.hasOption("f")) {
             System.out.println("You need to provide path to pairing secret if you" +
-                    "wish to initialize the secure channel, you can do so by using" +
-                    "option '-f' or '--pairing-secret-file'");
+                    " wish to initialize the secure channel, you can do so by using" +
+                    " option '-f' or '--pairing-secret-file'");
             return false;
         }
 

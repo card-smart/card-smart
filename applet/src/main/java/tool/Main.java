@@ -58,7 +58,8 @@ public class Main {
 
             System.out.print("smartie$ ");
         }
-        System.out.println("Thank you for using smartie, your friend for smart-card interaction.");
+        System.out.println("Thank you for using smartie, " +
+                "your friend for smart-card interaction.");
     }
 
     private static void processCommand(String[] cmd) throws Exception {
@@ -105,9 +106,11 @@ public class Main {
         return true;
     }
 
-    private static int checkSecureCommunication(Arguments args, CardManager cardMngr) throws CardException, CardWrongStateException, CardErrorException {
+    private static int checkSecureCommunication(Arguments args, CardManager cardMngr)
+            throws CardException, CardWrongStateException, CardErrorException {
         if (secureCommunication && args.pairingSecret != null)
-            System.out.println("You do not need to provide the pairing secret for this session anymore");
+            System.out.println("You do not need to provide the pairing secret" +
+                    " for this session anymore");
 
         if (secureCommunication || args.pairingSecret == null)
             return 0;
@@ -116,7 +119,7 @@ public class Main {
             secure = new ToolSecureChannel();
         } catch (Exception e) {
             System.out.println("We are sorry, but your HW does not support the required" +
-                        "security algorithms or correct version of them");
+                        " security algorithms or correct version of them");
             return 1;
         }
 
@@ -217,13 +220,13 @@ public class Main {
         if (!cardVerifyPINOnly(cardMngr, args)) {
             return;
         }
-        System.out.print("Verification successful!\n");
+        System.out.println("Verification successful!");
     }
 
     private static void cardChangePIN(CardManager cardMngr, Arguments args) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x23, args.PIN));
         processResponse(response);
-        System.out.print("Change PIN successful!\n");
+        System.out.println("Change PIN successful!");
     }
 
     private static void cardGetSecret(CardManager cardMngr, Arguments args) throws Exception {
@@ -239,13 +242,13 @@ public class Main {
 
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x25, data));
         processResponse(response);
-        System.out.print("Store secret successful!\n");
+        System.out.println("Store secret successful!");
     }
 
     private static void cardDeleteSecret(CardManager cardMngr, Arguments args) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU( 0x26, args.secretName));
         processResponse(response);
-        System.out.print("Delete secret successful!\n");
+        System.out.println("Delete secret successful!");
     }
 
     private static byte[] cardGetPublicKey(CardManager cardMngr) throws CardException, CardWrongStateException, CardErrorException {

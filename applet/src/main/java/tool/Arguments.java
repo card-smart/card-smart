@@ -61,7 +61,7 @@ public class Arguments {
         } catch (IOException e) {
             if (!cmd.hasOption('t')) {
                 System.out.println("You need to use option '-t' or '--init' if" +
-                        "you want to create the pairing secret.");
+                        " you want to create the pairing secret.");
                 return false;
             }
             pairingSecret = ToolSecureChannel.createPairingSecret(pairingSecretFile);
