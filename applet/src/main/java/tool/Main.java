@@ -71,14 +71,30 @@ public class Main {
             return;
         }
 
-        if (args.loginNeeded) {
-            if (!cardGetPINTries(cardMngr)) {
-                System.out.println("You exceeded the possible tries for PIN, card is blocked");
-            }
-            if (cardVerifyPINOnly(cardMngr, args) != 0) {
+        if (secureCommunication && args.pairingSecret != null)
+            System.out.println("You do not need to provide the pairing secret for this session anymore");
+
+        if (!secureCommunication && args.pairingSecret != null) {
+            try {
+                secure = new ToolSecureChannel();
+            } catch (Exception e) {
+                System.out.println("We are sorry, but your HW does not support the required" +
+                        "security algorithms or correct version of them");
                 return;
             }
+            if (args.init)
+                initializeApplet(cardMngr, args, secure);
+
+            if (!openSecureChannel(cardMngr, args, secure))
+                return;
+            secureCommunication = true;
+
+            if (args.init)
+                return;
         }
+
+        if (!checkPIN(args, cardMngr))
+            return;
 
         if (cmd_parsed.hasOption('l'))
             cardGetNames(cardMngr);
@@ -139,6 +155,9 @@ public class Main {
     }
 
     private static CommandAPDU buildAPDU(int ins, byte[] data) {
+        // vsetky secure instrukcie su iba o 0x10 posunute ze?
+        if (secureCommunication)
+            return secure.prepareSecureAPDU((byte) 0xB0, (byte) (ins + 0x10), data);
         return new CommandAPDU(0xB0, ins, 0x00, 0x00, data);
     }
 
