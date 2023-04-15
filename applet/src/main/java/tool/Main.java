@@ -18,49 +18,31 @@ import java.util.Scanner;
 
 public class Main {
     private static final CommandParser cmdParser = new CommandParser();
-    private static final boolean release = false;
     private static final boolean simulator = false;
+    private static boolean secureCommunication = false;
+    private static ToolSecureChannel secure = null; // secure object implementing all SC functions,
+                                                    // all sensitive data (keys, iv) are stored inside
     private static final String APPLET_AID = "63617264736D6172746170706C6574";
     private static final byte[] APPLET_AID_BYTE = Util.hexStringToByteArray(APPLET_AID);
 
     public static void main(String[] args) throws Exception {
-        // create secure object implementing all SC functions, all sensitive data (keys, iv) are stored inside
-        ToolSecureChannel secure = new ToolSecureChannel();
-        demo(secure);
-//
-//        /*
-//        This is for our testing - on simulator or on a real card - specified above,
-//        simulator is the default and only call, as the real card is not implemented yet
-//
-//        You can use either sendAPDU() function where you can specify
-//        command line arguments in an array to avoid writing them each time:
-//
-//            sendAPDU(cmdParser, new String[]{"-v", "meno", "--pin", "pinik"});
-//
-//        OR you can use smartie function to test more behaviour.
-//        It will run smartie app and expect input until you type 'quit':
-//
-//            smartie$ -v name --pin 75436
-//            // some output
-//            smartie$ --list
-//            // some output
-//            smartie$ quit
-//         */
-//        if (!release) {
-//            sendAPDU(new String[]{"-v", "meno", "--pin", "pinik"});
-//            //smartie();
-//            return;
-//        }
-//
-//        // THIS IS FOR RELEASE, NOT TESTING
-//        if (args.length > 0) {
-//            CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, args);
-//            // TODO call desired instruction
-//            return;
-//        }
-//
-//        smartie();
+        // THIS CODE IS ONLY FOR DEMO:
+        //try {
+        //    secure = new ToolSecureChannel();
+        //} catch (Exception e) {
+        //    System.out.println("We are sorry, but your HW does not support the required" +
+        //            "security algorithms or correct version of them");
+        //    return;
+        //}
+        //demo(secure);
 
+        // RELEASE
+        if (args.length > 0) {
+            processCommand(args);
+            return;
+        }
+
+        smartie();
     }
 
     private static void demo(ToolSecureChannel secure) throws Exception {
@@ -147,7 +129,7 @@ public class Main {
         }
     }
 
-    private static void sendAPDU(String[] cmd, ToolSecureChannel secure) throws Exception {
+    private static void processCommand(String[] cmd) throws Exception {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
         Arguments args = new Arguments(cmd_parsed);
 
