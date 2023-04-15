@@ -100,7 +100,9 @@
   Secure RES:
   0x90 | 0x00 | encrypted(data [max 238] | SW1 | SW2) [max 240 B] | MAC tag [16 B]
   ```
-  * when error happens during encryption, decryption, MAC creation or MAC verify, corresponding error codes are returned directly **unencrypted**
+* when error happens during encryption, decryption, MAC creation or MAC verify, corresponding error codes are returned directly **unencrypted**
+  * wrongly supplied pairing secret
+  * possible attack with uncorrect keys
 
 ## Applet states
 ### Uninitialized state

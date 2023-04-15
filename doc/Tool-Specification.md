@@ -1,7 +1,39 @@
 # CardSmart Tool
 
-## Workflows in uninitialized mode
-// TODO
+## Options
+| short option | long option             | argument | description                                   |
+|--------------|-------------------------|----------|-----------------------------------------------|
+| `-h`         | `--help`                |          | print tool usage and options                  |
+| `-l`         | `--list`                |          | list all names of secrets on the card         |
+| `-t`         | `--init`                |          | initialize applet                             |
+| `-v`         | `--value`               | name     | get value of secret by name                   |
+| `-p`         | `--pin`                 | PIN      | use PIN                                       |
+| `-f`         | `--pairing-secret-file` | path     | supply path for/with file with pairing secret |
+| `-c`         | `--change-pin`          | PIN      | change PIN to given value                     |
+| `-s`         | `--store-secret`        | name     | store secret value from input file            |
+| `-i`         | `--in-file`             | path     | specify input file                            |
+| `-d`         | `--delete`              | name     | delete secret with given name                 |
+
+## Functionality
+### Uninitialized mode
+1. get help: `--help`
+2. list all stored names: `--list`
+3. store secret: `--store-secret my_secret --in-file ./path/to/file/with/secret --pin 1234`
+4. get value of secret: `--value my_secret --pin 1234`
+5. delete secret: `--delete my_secret --pin 1234`
+6. change PIN: `--change-pin 56789 --pin 1234`
+
+### Initialize mode
+1. initialize applet: `--init --pin 1234 --pairing-secret-file ./path/to/file/with/secret`
+   * if file exists and contains secret - this secret is used for init
+   * otherwise new secret generated and stored into file with given path
+2. list all stored names: `--list --pairing-secret-file ./path/to/file/with/secret`
+3. store secret: `--store-secret my_secret --in-file ./path/to/file/with/secret --pin 1234 --pairing-secret-file ./path/to/file/with/secret`
+4. get value of secret: `--value my_secret --pin 1234 --pairing-secret-file ./path/to/file/with/secret`
+5. delete secret: `--delete my_secret --pin 1234 --pairing-secret-file ./path/to/file/with/secret`
+6. change PIN: `--change-pin 56789 --pin 1234 --pairing-secret-file ./path/to/file/with/secret`
+
+---
 
 ## Workflow to initialize applet
 1. <span style="color:blue">user provides `PIN` (which will be set to the card) and `path` for storing `pairingSecret`</span>

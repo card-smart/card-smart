@@ -3,22 +3,27 @@
 ## Used Algorithms
 ### Encryption of communication
 * _data confidentiality_
-* AES256 cipher in CBC mode with PKCS#5 (PKCS#7 padding)
-  * shared symmetric key used both by tool and applet
+* AES256 cipher in CBC mode with [ISO9797 M2 padding](https://en.wikipedia.org/wiki/ISO/IEC_9797-1)
+  * derived shared symmetric key used both by tool and applet
   * maximum length after encryption is 240 B
     * maximum of 223 B of data can be encrypted
       * 16 B need to be padded in case of data length divisible by 16 B
       * otherwise the smallest padding size is 1 B
 ### MAC tags
 * _data integrity, authentication of origin_
+  * non-repudiation is not needed property as MAC key is shared only among 2 parties communicating in special manner
 * based on AES128 CBC MAC with not padding
-  * input data have already desired length as they are produced by AES encryption
+  * response data have already desired length as they are produced by AES encryption
+  * tag in APDU is computed from 5 instruction bytes (CLA, INS, P1, P2, Lc) and encrypted data
+    * missing 11 bytes taken from current iv value
 * _encrypt-then-MAC_ - mechanism
   * ensuring integrity of both plaintext and ciphertext
-  * MAC is verified before encryption
+  * MAC is computed after encryption
+  * MAC is verified before decryption
 
 ## Secure Channel Establishment
 ### **Tool** Secure Channel Initialization
+* pairingSecret not set yet
 * tool generates _ephemeral_ EC keypair 
 
 ### **Card** Secure Channel Initialization
@@ -85,7 +90,14 @@ CLA | INS | P1 | P2 | L_C | encrypted(data) [max 240 B] | MAC tag [16 B]
 
 ### APDU and responses on the **tool**'s site
 #### Encryption of APDU
-* TODO
+* only data encrypted
+* MAC computed after encryption from CLA, INS, P1, P2, Lc and payload
+* {ToolSecureChannel:`prepareSecureAPDU`}
 
 #### Decryption of response
-* TODO
+* SW is by default set to success (`0x9000`)
+  * original SW is appended into data part of response and encrypted
+* different SW than success means that encryption/decryption or MAC computing failed
+  * 2 possible reasons
+    1. user fault - wrong pairing secret used
+    2. possible attack - attacker does not know secret and cannot create correct keys for encryption/MAC
