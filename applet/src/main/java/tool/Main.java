@@ -56,20 +56,18 @@ public class Main {
 
             System.out.print("smartie$ ");
         }
+        System.out.println("Thank you for using smartie, your friend for smart-card interaction.");
     }
 
     private static void processCommand(String[] cmd) throws Exception {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
         Arguments args = new Arguments(cmd_parsed);
-
-        if (!args.validateInput()) {
+        if (!args.validateInput())
             return;
-        }
 
         final CardManager cardMngr = getCardMngr();
-        if (cardMngr == null) {
+        if (cardMngr == null)
             return;
-        }
 
         if (secureCommunication && args.pairingSecret != null)
             System.out.println("You do not need to provide the pairing secret for this session anymore");
