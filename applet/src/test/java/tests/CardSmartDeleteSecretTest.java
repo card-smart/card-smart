@@ -48,7 +48,7 @@ public class CardSmartDeleteSecretTest extends BaseTest {
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
 
         /* delete secret from card */
-        byte[] name = {4, 0x31, 0x32, 0x33, 0x34};
+        byte[] name = {0x31, 0x32, 0x33, 0x34};
         cmd = new CommandAPDU(0xB0, 0x26, 0x00, 0x00, name);
         responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
