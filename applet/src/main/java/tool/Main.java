@@ -9,12 +9,15 @@ import org.apache.commons.cli.CommandLine;
 import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
+import javax.sound.midi.SysexMessage;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Scanner;
+
+import static javax.xml.bind.DatatypeConverter.printHexBinary;
 
 public class Main {
     private static final CommandParser cmdParser = new CommandParser();
@@ -103,7 +106,7 @@ public class Main {
         return true;
     }
 
-    private static int checkSecureCommunication(Arguments args, CardManager cardMngr) throws CardException {
+    private static int checkSecureCommunication(Arguments args, CardManager cardMngr) throws CardException, CardWrongStateException, CardErrorException {
         if (secureCommunication && args.pairingSecret != null)
             System.out.println("You do not need to provide the pairing secret for this session anymore");
 
@@ -160,28 +163,51 @@ public class Main {
     }
 
     private static CommandAPDU buildAPDU(int ins, byte[] data) {
-        // vsetky secure instrukcie su iba o 0x10 posunute ze?
         if (secureCommunication)
             return secure.prepareSecureAPDU((byte) 0xB0, (byte) (ins + 0x10), data);
         return new CommandAPDU(0xB0, ins, 0x00, 0x00, data);
     }
 
+    private static byte[] processResponse(ResponseAPDU response) throws CardWrongStateException, CardErrorException {
+        if (secureCommunication) {
+            byte[] res = secure.getResponseData(response.getData());
+            int len = res.length;
+
+            if (res[len - 2] != (byte) 0x90) {
+                int sw = (res[len - 2] << 8) + res[len - 1];
+                processSW(sw);
+                return null;
+            }
+            return Arrays.copyOf(res, len - 2);
+        }
+        if (response.getSW() != 0x9000) {
+            processSW(response.getSW());
+            return null;
+        }
+
+        return response.getData();
+    }
+
     private static void cardGetNames(CardManager cardMngr) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x20, new byte[]{}));
-        System.out.println(response); // TODO do something with data
+        byte[] res = processResponse(response);
+
+        if (res != null) {
+            printHexBinary(res);
+        }
     }
 
     private static boolean cardGetPINTries(CardManager cardMngr) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x21, new byte[]{}));
         System.out.println(response);
-        // TODO validate we have enough PIN tries
-        return true;
+        byte[] res = processResponse(response);
+        return res != null && res[0] > (byte) 0x00;
     }
 
-    private static boolean cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException {
+    private static boolean cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException, CardWrongStateException, CardErrorException {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x22, args.PIN));
         if (response.getSW() != 0x9000) {
-            System.out.println("Wrong PIN!");
+            processSW(response.getSW());
             return false;
         }
         return true;
@@ -189,20 +215,21 @@ public class Main {
 
     private static void cardVerifyPIN(CardManager cardMngr, Arguments args) throws Exception {
         if (!cardVerifyPINOnly(cardMngr, args)) {
-            // TODO something here
             return;
         }
+        System.out.print("Verification successful!\n");
     }
 
     private static void cardChangePIN(CardManager cardMngr, Arguments args) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x23, args.PIN));
-        System.out.println(response);
-        // TODO do something with data
+        processResponse(response);
+        System.out.print("Change PIN successful!\n");
     }
 
     private static void cardGetSecret(CardManager cardMngr, Arguments args) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x24, args.secretName));
-        System.out.println(response);
+        byte[] res = processResponse(response);
+        printHexBinary(res);
     }
 
     private static void cardStoreSecret(CardManager cardMngr, Arguments args) throws Exception {
@@ -211,22 +238,24 @@ public class Main {
         byte[] data = Arrays.copyOf(r, 44);
 
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x25, data));
-        System.out.println(response);
+        processResponse(response);
+        System.out.print("Store secret successful!\n");
     }
 
     private static void cardDeleteSecret(CardManager cardMngr, Arguments args) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU( 0x26, args.secretName));
-        System.out.println(response);
+        processResponse(response);
+        System.out.print("Delete secret successful!\n");
     }
 
-    private static byte[] cardGetPublicKey(CardManager cardMngr) throws CardException {
+    private static byte[] cardGetPublicKey(CardManager cardMngr) throws CardException, CardWrongStateException, CardErrorException {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
-        //TODO check response SW
+        processResponse(response);
         return response.getData();
     }
 
     private static void initializeApplet(CardManager cardMngr, Arguments args, ToolSecureChannel secure)
-            throws CardException, NoSuchAlgorithmException, InvalidKeyException {
+            throws CardException, NoSuchAlgorithmException, InvalidKeyException, CardWrongStateException, CardErrorException {
         byte[] cardPublicKeyBytes = cardGetPublicKey(cardMngr);
         // create payload for APDU: publicKey [65 B] | IV [16 B] | encrypted [48 B]
         byte[] payload = secure.prepareInitializationPayload(cardPublicKeyBytes, args.PIN, args.pairingSecret);
