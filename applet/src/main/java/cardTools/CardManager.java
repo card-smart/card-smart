@@ -89,7 +89,7 @@ public class CardManager {
         AID appletAIDRes = simulator.installApplet(appletAID, appletClass, installData, (short) 0, (byte) installData.length);
         simulator.selectApplet(appletAID);
 
-        return new SimulatedCardChannelLocal(simulator);
+        return new SimulatedCardChannelLocal(simulator, bDebug);
     }
 
     private CardChannel connectToCardByTerminalFactory(TerminalFactory factory, int targetReaderIndex) throws CardException {

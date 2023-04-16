@@ -24,6 +24,7 @@ public class CommandParser implements CommandLineParser {
         options.addOption(buildOption("s", "store-secret", "name", "store secret from input file"));
         options.addOption(buildOption("i", "in-file", "file", "input file"));
         options.addOption(buildOption("d", "delete", "name", "delete secret"));
+        options.addOption(new Option("g", "debug", false, "print debug logs"));
     }
 
     private Option buildOption(String op, String long_op, String arg_name, String description) {

@@ -19,6 +19,7 @@ public class Arguments {
     public boolean init = false;
     public byte[] pairingSecret;
     public String pairingSecretFile;
+    public boolean debug = false;
 
     public Arguments(CommandLine cmd) {
         this.cmd = cmd;
@@ -49,6 +50,9 @@ public class Arguments {
         }
         if (cmd.hasOption('f')) {
             pairingSecretFile = cmd.getOptionValue('f');
+        }
+        if (cmd.hasOption('g')) {
+            debug = true;
         }
     }
 

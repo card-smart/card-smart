@@ -16,7 +16,7 @@ import static javax.xml.bind.DatatypeConverter.printHexBinary;
 
 public class Main {
     private static final CommandParser cmdParser = new CommandParser();
-    private static final boolean simulator = false;
+    public static boolean simulator = true;
     private static boolean secureCommunication = false;
     private static ToolSecureChannel secure = null; // secure object implementing all SC functions,
                                                     // all sensitive data (keys, iv) are stored inside
@@ -74,6 +74,8 @@ public class Main {
         Arguments args = new Arguments(cmd_parsed);
         if (!args.validateInput())
             return;
+
+        cardMngr.setbDebug(args.debug);
 
         if (checkSecureCommunication(args, cardMngr) != 0)
             return;
@@ -145,12 +147,11 @@ public class Main {
      * Returned instance is already connected to the card and SELECT APDU was sent.
      */
     private static CardManager getCardMngr() {
-        CardManager cardMngr = new CardManager(true, APPLET_AID_BYTE);
+        CardManager cardMngr = new CardManager(false, APPLET_AID_BYTE);
         final RunConfig runCfg = RunConfig.getDefaultConfig();
         if (simulator) { // TODO or release?
             runCfg.setAppletToSimulate(CardSmartApplet.class);
             runCfg.setTestCardType(RunConfig.CARD_TYPE.JCARDSIMLOCAL); // Use simulator
-            System.out.println("USING SIMULATOR");
         } else {
             runCfg.setTestCardType(RunConfig.CARD_TYPE.PHYSICAL); // Use real card
         }
@@ -235,7 +236,6 @@ public class Main {
 
     private static boolean cardGetPINTries(CardManager cardMngr) {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x21, new byte[]{}));
-        System.out.println(response);
         byte[] res = processResponse(response);
         return res != null && res[0] > (byte) 0x00;
     }
