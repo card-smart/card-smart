@@ -89,7 +89,7 @@ public class MainTest {
         Main.main(new String[]{});
         assertEquals("Connecting to card... Done." + sep
                 + "smartie$ Secret stored" + sep
-                + "smartie$ 6E616D65" + sep
+                + "smartie$ name" + sep
                 + "smartie$ Thank you for using smartie, your friend for smart-card interaction." + sep, out.toString());
     }
 
@@ -102,7 +102,7 @@ public class MainTest {
         Main.main(new String[]{});
         assertEquals("Connecting to card... Done." + sep
                 + "smartie$ Secret stored" + sep
-                + "smartie$ 6E616D65" + sep
+                + "smartie$ name" + sep
                 + "smartie$ Secret deleted" + sep
                 + "smartie$ " // output of last -l option
                 + "smartie$ Thank you for using smartie, your friend for smart-card interaction." + sep, out.toString());
