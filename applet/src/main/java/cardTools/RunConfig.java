@@ -4,6 +4,7 @@ package cardTools;
  * Applet run configuration.
  *
  * @author Petr Svenda, Dusan Klinec
+ * Code taken from PV204 seminar materials.
  */
 public class RunConfig {
     int targetReaderIndex = 0;

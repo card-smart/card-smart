@@ -11,6 +11,7 @@ import java.util.List;
 /**
  *
  * @author Petr Svenda
+ * Code taken from PV204 seminar materials.
  */
 public class CardManager {
     protected boolean bDebug = false;

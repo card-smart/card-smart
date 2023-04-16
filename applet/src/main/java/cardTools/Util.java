@@ -6,6 +6,7 @@ import java.nio.ByteOrder;
 /**
  *
  * @author Vasilios Mavroudis and Petr Svenda
+ * Code taken from PV204 seminar materials.
  */
 public class Util {
 

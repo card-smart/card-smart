@@ -8,6 +8,7 @@ import javax.smartcardio.CardException;
 /**
  *
  * @author Petr Svenda
+ * Code taken from PV204 seminar materials.
  */
 public class SimulatedCard extends Card {
 

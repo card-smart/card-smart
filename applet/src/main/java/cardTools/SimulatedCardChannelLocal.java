@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 /**
  *
  * @author Petr Svenda
+ * Code taken from PV204 seminar materials.
  */
 public class SimulatedCardChannelLocal extends CardChannel {
     JavaxSmartCardInterface m_simulator;

@@ -91,6 +91,7 @@ public class Arguments {
             try {
                 secretValue = Files.readAllBytes(Paths.get(cmd.getOptionValue('i')));
             } catch (IOException e) {
+                System.out.println("Invalid file: " + e.getMessage());
                 return false;
             }
             if (secretValue.length < 4 || secretValue.length > 32) {
@@ -121,10 +122,6 @@ public class Arguments {
         if (secretName != null && (secretName.length < 4 || secretName.length > 10)) {
             System.out.println("Wrong secret name length");
             return false;
-        }
-
-        if (secretValue != null) {
-            secretValue = padBytes(secretValue, 32);
         }
 
         return true;

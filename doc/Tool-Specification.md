@@ -16,6 +16,14 @@
 | `-g`         | `--debug`               |          | print debug logs with APDU                    |
 
 ## Functionality
+* when tool is called with arguments, it processes the commands in one shot with one secure channel opened
+* when tool is called without arguments on command line, it starts interactive program `smartie`
+  * program works with options in the same manner and command line version
+  * it opens secure channel only once
+  * path to pairing secret needs to be set only once at the beginning
+  * PIN needs to be inserted everytime needed
+  * to exit the interactive program, type `quit`
+
 ### Uninitialized mode
 1. get help: `--help`
 2. single verify PIN: `-p 1234`
