@@ -227,7 +227,7 @@ public class Main {
                 return;
             }
             for (int i = offset + 1; i < offset + 1 + length; i++) {
-                System.out.printf("%02X", names[i]);
+                System.out.printf("%c", names[i]);
             }
             System.out.println();
             offset += length + 1;
