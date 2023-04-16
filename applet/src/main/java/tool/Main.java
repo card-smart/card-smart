@@ -40,7 +40,8 @@ public class Main {
 
         // RELEASE
         if (args.length > 0) {
-            processCommand(args);
+            final CardManager cardMngr = getCardMngr();
+            processCommand(args, cardMngr);
             return;
         }
 
@@ -51,11 +52,12 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         System.out.print("smartie$ ");
         String line;
+        final CardManager cardMngr = getCardMngr();
 
         while (!Objects.equals((line = scanner.nextLine()), "quit")) {
             String[] cmd = line.split(" ");
 
-            processCommand(cmd);
+            processCommand(cmd, cardMngr);
 
             System.out.print("smartie$ ");
         }
@@ -63,7 +65,7 @@ public class Main {
                 "your friend for smart-card interaction.");
     }
 
-    private static void processCommand(String[] cmd) {
+    private static void processCommand(String[] cmd, CardManager cardMngr) {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
         if (cmd_parsed == null)
             return;
@@ -72,7 +74,6 @@ public class Main {
         if (!args.validateInput())
             return;
 
-        final CardManager cardMngr = getCardMngr();
         if (cardMngr == null)
             return;
 
