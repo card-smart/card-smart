@@ -91,6 +91,7 @@ public class Arguments {
             try {
                 secretValue = Files.readAllBytes(Paths.get(cmd.getOptionValue('i')));
             } catch (IOException e) {
+                System.out.println("Invalid file: " + e.getMessage());
                 return false;
             }
             if (secretValue.length < 4 || secretValue.length > 32) {
