@@ -57,6 +57,7 @@ public class ToolSecureChannel {
             simpleDerivedSecret = this.getDerivedSecret(cardPublicKey, (ECPrivateKey) keyPair.getPrivate());
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             System.out.println(e);
+            return null;
         }
         aesKey.setKey(simpleDerivedSecret, (short) 0);
 
@@ -90,6 +91,7 @@ public class ToolSecureChannel {
             this.generateECKeyPair();
         } catch (InvalidAlgorithmParameterException e) {
             System.out.println(e);
+            return null;
         }
         return this.getPublicKeyBytes((ECPublicKey) keyPair.getPublic());
     }
@@ -107,6 +109,7 @@ public class ToolSecureChannel {
             sharedSecrets = this.computeSharedSecrets(cardPublicKey, (ECPrivateKey) keyPair.getPrivate(), pairingSecret, salt);
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             System.out.println(e);
+            return;
         }
         aesKey.setKey(sharedSecrets, (byte) 0);
         macKey.setKey(sharedSecrets, (byte) 32);

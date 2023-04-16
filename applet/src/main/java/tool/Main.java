@@ -122,8 +122,8 @@ public class Main {
             return 1;
         }
 
-        if (args.init)
-            initializeApplet(cardMngr, args);
+        if (args.init && !initializeApplet(cardMngr, args))
+            return 1;
 
         if (!openSecureChannel(cardMngr, args))
             return 1;
@@ -262,18 +262,27 @@ public class Main {
         return processResponse(response);
     }
 
-    private static void initializeApplet(CardManager cardMngr, Arguments args) {
+    private static boolean initializeApplet(CardManager cardMngr, Arguments args) {
         byte[] cardPublicKeyBytes = cardGetPublicKey(cardMngr);
+        if (cardPublicKeyBytes == null) {
+            System.out.println("Failed to init applet!");
+            return false;
+        }
         // create payload for APDU: publicKey [65 B] | IV [16 B] | encrypted [48 B]
         byte[] payload = secure.prepareInitializationPayload(cardPublicKeyBytes, args.PIN, args.pairingSecret);
+        if (payload == null) {
+            System.out.println("Failed to init applet!");
+            return false;
+        }
 
         // init command APDU: 0xB0 | 0x41 | 0x00 | 0x00 | 0x81 | publicKey [65 B] | IV [16 B] | encrypted [48 B]
         ResponseAPDU initResponse = cardMngr.transmit(buildAPDU(0x41, payload));
-        if (initResponse.getSW() == 0x9000)
-            System.out.println("Success to init applet!");
-        else {
+        if (initResponse.getSW() != 0x9000) {
             System.out.println("Failed to init applet!");
+            return false;
         }
+        System.out.println("Success to init applet!");
+        return true;
     }
 
     private static boolean openSecureChannel(CardManager cardMngr, Arguments args) {
@@ -282,6 +291,9 @@ public class Main {
         byte[] cardPublicKeyBytes = getKeyResponse.getData();
         // tool generates ephemeral key
         byte[] publicKeyBytes = secure.getFreshPublicKeyBytes();
+        if (publicKeyBytes == null)
+            return false;
+
         ResponseAPDU openSCResponse = cardMngr.transmit(buildAPDU(0x42, publicKeyBytes));
         if (openSCResponse.getSW() == 0x9000)
             System.out.println("Success to open SC!");
