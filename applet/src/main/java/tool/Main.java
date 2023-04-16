@@ -92,7 +92,7 @@ public class Main {
             cardVerifyPIN(cardMngr, args);
     }
 
-    private static boolean checkPIN(Arguments args, CardManager cardMngr) throws Exception {
+    private static boolean checkPIN(Arguments args, CardManager cardMngr) {
         if (!args.loginNeeded)
             return true;
 
@@ -107,7 +107,7 @@ public class Main {
     }
 
     private static int checkSecureCommunication(Arguments args, CardManager cardMngr)
-            throws CardException, CardWrongStateException, CardErrorException {
+            throws CardException {
         if (secureCommunication && args.pairingSecret != null)
             System.out.println("You do not need to provide the pairing secret" +
                     " for this session anymore");
@@ -145,7 +145,7 @@ public class Main {
      * Returned instance type depends on Main.simulator variable.
      * Returned instance is already connected to the card and SELECT APDU was sent.
      */
-    private static CardManager getCardMngr() throws Exception {
+    private static CardManager getCardMngr() {
         CardManager cardMngr = new CardManager(true, APPLET_AID_BYTE);
         final RunConfig runCfg = RunConfig.getDefaultConfig();
         if (simulator) { // TODO or release?
@@ -159,9 +159,13 @@ public class Main {
         // Connect to first available card
         // NOTE: selects target applet based on AID specified in CardManager constructor
         System.out.print("Connecting to card...");
-        if (!cardMngr.Connect(runCfg)) {
-            System.out.println(" Failed.");
-            return null;
+        try {
+            if (!cardMngr.Connect(runCfg)) {
+                System.out.println(" Failed.");
+                return null;
+            }
+        } catch (Exception e) {
+            System.out.println(e);
         }
         System.out.println(" Done.");
         return cardMngr;
@@ -200,7 +204,7 @@ public class Main {
         return null;
     }
 
-    private static void cardGetNames(CardManager cardMngr) throws Exception {
+    private static void cardGetNames(CardManager cardMngr) {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x20, new byte[]{}));
         byte[] res = processResponse(response);
 
@@ -209,39 +213,39 @@ public class Main {
         }
     }
 
-    private static boolean cardGetPINTries(CardManager cardMngr) throws Exception {
+    private static boolean cardGetPINTries(CardManager cardMngr) {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x21, new byte[]{}));
         System.out.println(response);
         byte[] res = processResponse(response);
         return res != null && res[0] > (byte) 0x00;
     }
 
-    private static boolean cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException {
+    private static boolean cardVerifyPINOnly(CardManager cardMngr, Arguments args) {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x22, args.PIN));
         return processResponse(response) != null;
     }
 
-    private static void cardVerifyPIN(CardManager cardMngr, Arguments args) throws Exception {
+    private static void cardVerifyPIN(CardManager cardMngr, Arguments args) {
         if (!cardVerifyPINOnly(cardMngr, args)) {
             return;
         }
         System.out.println("Verification successful!");
     }
 
-    private static void cardChangePIN(CardManager cardMngr, Arguments args) throws Exception {
+    private static void cardChangePIN(CardManager cardMngr, Arguments args) {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x23, args.PIN));
         if (processResponse(response) != null)
             System.out.println("Change PIN successful!");
     }
 
-    private static void cardGetSecret(CardManager cardMngr, Arguments args) throws Exception {
+    private static void cardGetSecret(CardManager cardMngr, Arguments args) {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x24, args.secretName));
         byte[] res = processResponse(response);
         if (res != null)
             printHexBinary(res);
     }
 
-    private static void cardStoreSecret(CardManager cardMngr, Arguments args) throws Exception {
+    private static void cardStoreSecret(CardManager cardMngr, Arguments args) {
         byte[] r = Arguments.concat(new byte[]{(byte) args.secretName.length}, args.secretName,
                 new byte[]{(byte) args.secretValue.length}, args.secretValue);
         byte[] data = Arrays.copyOf(r, 44);
@@ -251,19 +255,19 @@ public class Main {
             System.out.println("Store secret successful!");
     }
 
-    private static void cardDeleteSecret(CardManager cardMngr, Arguments args) throws Exception {
+    private static void cardDeleteSecret(CardManager cardMngr, Arguments args) {
         ResponseAPDU response = cardMngr.transmit(buildAPDU( 0x26, args.secretName));
         if (processResponse(response) != null)
             System.out.println("Delete secret successful!");
     }
 
-    private static byte[] cardGetPublicKey(CardManager cardMngr) throws CardException {
+    private static byte[] cardGetPublicKey(CardManager cardMngr) {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
         return processResponse(response);
     }
 
     private static void initializeApplet(CardManager cardMngr, Arguments args)
-            throws CardException, NoSuchAlgorithmException, InvalidKeyException {
+            throws NoSuchAlgorithmException, InvalidKeyException {
         byte[] cardPublicKeyBytes = cardGetPublicKey(cardMngr);
         // create payload for APDU: publicKey [65 B] | IV [16 B] | encrypted [48 B]
         byte[] payload = secure.prepareInitializationPayload(cardPublicKeyBytes, args.PIN, args.pairingSecret);

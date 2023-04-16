@@ -47,7 +47,7 @@ public class CommandParser implements CommandLineParser {
         return true;
     }
 
-    private boolean validateCmd(CommandLine cmd) throws ParseException {
+    private boolean validateCmd(CommandLine cmd) {
         if ((cmd.hasOption("help") || cmd.hasOption("list"))
                 && ((cmd.getOptions().length > 1) || cmd.getArgs().length > 0)) {
             System.out.println("Command: `--" + cmd.getOptions()[0].getLongOpt()

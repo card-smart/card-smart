@@ -78,7 +78,7 @@ public class Arguments {
         return Arrays.copyOf(PIN, len);
     }
 
-    public boolean validateInput() throws IOException {
+    public boolean validateInput() {
         // here we want to validate length of given inputs and stuff
         if (cmd.hasOption('h')) //there is no future for this option
             return false;

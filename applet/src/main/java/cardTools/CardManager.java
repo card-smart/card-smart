@@ -141,20 +141,25 @@ public class CardManager {
         }
     }
     
-    public ResponseAPDU transmit(CommandAPDU cmd)
-            throws CardException {
+    public ResponseAPDU transmit(CommandAPDU cmd) {
 
         lastCommand = cmd;
-        if (bDebug == true) {
+        if (bDebug) {
             log(cmd);
         }
 
         long elapsed = -System.currentTimeMillis();
-        ResponseAPDU response = channel.transmit(cmd);
+        ResponseAPDU response = null;
+
+        try {
+            response = channel.transmit(cmd);
+        } catch (CardException e) {
+            System.out.println(e);
+        }
         elapsed += System.currentTimeMillis();
         lastTransmitTime = elapsed;
 
-        if (bDebug == true) {
+        if (bDebug) {
             log(response, lastTransmitTime);
         }
 
