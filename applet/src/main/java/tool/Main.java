@@ -173,33 +173,31 @@ public class Main {
         return new CommandAPDU(0xB0, ins, 0x00, 0x00, data);
     }
 
-    private static byte[] processResponse(ResponseAPDU response){
+    private static byte[] processResponse(ResponseAPDU response) {
         if (response.getSW() != 0x9000) {
-            try {
-                processSW(response.getSW());
-            } catch (CardWrongStateException | CardErrorException e) {
-                System.out.println(e.getMessage());
-            }
-            return null;
+            return responseError(response.getSW());
         }
 
-        if (secureCommunication) {
-            byte[] res = secure.getResponseData(response.getData());
-            int len = res.length;
+        if (!secureCommunication)
+            return response.getData();
 
-            if (res[len - 2] != (byte) 0x90) {
-                int sw = (res[len - 2] << 8) + res[len - 1];
-                try {
-                    processSW(sw);
-                } catch (CardWrongStateException | CardErrorException e) {
-                    System.out.println(e.getMessage());
-                }
-                return null;
-            }
-            return Arrays.copyOf(res, len - 2);
+        byte[] res = secure.getResponseData(response.getData());
+        int len = res.length;
+
+        if (res[len - 2] != (byte) 0x90) {
+            int sw = (res[len - 2] << 8) + res[len - 1];
+            return responseError(sw);
         }
+        return Arrays.copyOf(res, len - 2);
+    }
 
-        return response.getData();
+    private static byte[] responseError(int sw) {
+        try {
+            processSW(sw);
+        } catch (CardWrongStateException | CardErrorException e) {
+            System.out.println("Card error: " + e.getMessage());
+        }
+        return null;
     }
 
     private static void cardGetNames(CardManager cardMngr) throws Exception {
