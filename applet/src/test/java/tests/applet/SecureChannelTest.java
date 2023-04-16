@@ -1,14 +1,12 @@
-package tests;
+package tests.applet;
 
 import cz.muni.fi.crocs.rcard.client.CardManager;
 import cz.muni.fi.crocs.rcard.client.CardType;
-import org.junit.Assert;
 import org.junit.jupiter.api.*;
 import tool.ToolSecureChannel;
 
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import java.util.Arrays;
 
 public class SecureChannelTest extends BaseTest {
 
@@ -71,7 +69,8 @@ public class SecureChannelTest extends BaseTest {
         Assertions.assertEquals(0x6A04, responseAPDU.getSW());
     }
 
-    @Test
+    // tool always pads PIN
+    /*@Test
     public void initWrongPINLength() throws Exception {
         ToolSecureChannel secure = new ToolSecureChannel();
         CardManager card = connect();
@@ -88,7 +87,7 @@ public class SecureChannelTest extends BaseTest {
         } catch (Exception e) {
             assert(true);
         }
-    }
+    }*/
 
     @Test
     public void initWrongPairingSecretLength() throws Exception {

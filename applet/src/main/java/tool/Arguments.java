@@ -16,14 +16,19 @@ public class Arguments {
     public String secretFile;
     public byte[] newPIN;
     public boolean loginNeeded = true;
+    public boolean init = false;
     public byte[] pairingSecret;
     public String pairingSecretFile;
+    public boolean debug = false;
 
     public Arguments(CommandLine cmd) {
         this.cmd = cmd;
 
         if (cmd.hasOption('l')) {
             loginNeeded = false;
+        }
+        if (cmd.hasOption('t')) {
+            init = true;
         }
         if (cmd.hasOption('p')) {
             PIN = cmd.getOptionValue('p').getBytes();
@@ -46,20 +51,29 @@ public class Arguments {
         if (cmd.hasOption('f')) {
             pairingSecretFile = cmd.getOptionValue('f');
         }
+        if (cmd.hasOption('g')) {
+            debug = true;
+        }
     }
 
     private boolean validatePairingSecret() {
-        if (cmd.hasOption('f')) {
-            try {
-                pairingSecret = Files.readAllBytes(Paths.get(cmd.getOptionValue('f')));
-            } catch (IOException e) {
-                pairingSecret = ToolSecureChannel.createPairingSecret(pairingSecretFile);
-                return pairingSecret != null;
-            }
-            if (pairingSecret.length != 32) {
-                System.out.println("Pairing secret needs to be 32 bytes long!");
+        if (!cmd.hasOption('f'))
+            return true;
+
+        try {
+            pairingSecret = Files.readAllBytes(Paths.get(cmd.getOptionValue('f')));
+        } catch (IOException e) {
+            if (!cmd.hasOption('t')) {
+                System.out.println("You need to use option '-t' or '--init' if" +
+                        " you want to create the pairing secret.");
                 return false;
             }
+            pairingSecret = ToolSecureChannel.createPairingSecret(pairingSecretFile);
+            return pairingSecret != null;
+        }
+        if (pairingSecret.length != 32) {
+            System.out.println("Pairing secret needs to be 32 bytes long!");
+            return false;
         }
         return true;
     }
@@ -68,8 +82,10 @@ public class Arguments {
         return Arrays.copyOf(PIN, len);
     }
 
-    public boolean validateInput() throws IOException {
+    public boolean validateInput() {
         // here we want to validate length of given inputs and stuff
+        if (cmd.hasOption('h')) //there is no future for this option
+            return false;
 
         if (cmd.hasOption('i')) {
             try {
@@ -77,7 +93,8 @@ public class Arguments {
             } catch (IOException e) {
                 return false;
             }
-            if (secretValue.length < 1) {
+            if (secretValue.length < 4 || secretValue.length > 32) {
+                System.out.println("Wrong secret length");
                 return false;
             }
         }
@@ -86,24 +103,27 @@ public class Arguments {
             return false;
 
         if (PIN != null) {
-            if (PIN.length > 10)
+            if (PIN.length < 4 || PIN.length > 10) {
+                System.out.println("Wrong PIN length");
                 return false;
+            }
             PIN = padBytes(PIN, 10);
         }
 
         if (newPIN != null) {
-            if (newPIN.length > 10)
+            if (newPIN.length < 4 || newPIN.length > 10) {
+                System.out.println("Wrong new PIN length");
                 return false;
+            }
             newPIN = padBytes(newPIN, 10);
         }
 
-        if (secretName != null && secretName.length > 10) {
+        if (secretName != null && (secretName.length < 4 || secretName.length > 10)) {
+            System.out.println("Wrong secret name length");
             return false;
         }
 
         if (secretValue != null) {
-            if (secretValue.length > 32)
-                return false;
             secretValue = padBytes(secretValue, 32);
         }
 

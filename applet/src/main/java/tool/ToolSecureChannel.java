@@ -47,18 +47,19 @@ public class ToolSecureChannel {
      * @param pairingSecret pairing secret to be set on card
      * @return payload
      */
-    public byte[] prepareInitializationPayload(byte[] cardPublicKeyBytes, byte[] PIN, byte[] pairingSecret)
-            throws NoSuchAlgorithmException, InvalidKeyException {
-        if (PIN.length != 10 || pairingSecret.length != 32) {
-            throw new IllegalArgumentException();
-        }
+    public byte[] prepareInitializationPayload(byte[] cardPublicKeyBytes, byte[] PIN, byte[] pairingSecret) {
         // generate IV for encryption
         this.generateIV(iv);
         // derive simple encryption key and set it as key
         ECPublicKey cardPublicKey = this.convertBytesToPublicKey(cardPublicKeyBytes);
-        byte[] simpleDerivedSecret = this.getDerivedSecret(cardPublicKey, (ECPrivateKey) keyPair.getPrivate());
+        byte[] simpleDerivedSecret = null;
+        try {
+            simpleDerivedSecret = this.getDerivedSecret(cardPublicKey, (ECPrivateKey) keyPair.getPrivate());
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            System.out.println(e);
+            return null;
+        }
         aesKey.setKey(simpleDerivedSecret, (short) 0);
-
 
         // move [PIN | pairingSecret] into buffer
         byte[] data = new byte[42];
@@ -85,13 +86,17 @@ public class ToolSecureChannel {
      * Generate fresh EC keypair and return its public key in uncompressed from
      * @return 0x04 | x coordinate [32 B] | y coordinate [32 B]
      */
-    public byte[] getFreshPublicKeyBytes() throws InvalidAlgorithmParameterException {
-        this.generateECKeyPair();
+    public byte[] getFreshPublicKeyBytes() {
+        try {
+            this.generateECKeyPair();
+        } catch (InvalidAlgorithmParameterException e) {
+            System.out.println(e);
+            return null;
+        }
         return this.getPublicKeyBytes((ECPublicKey) keyPair.getPublic());
     }
 
-    public void createSharedSecrets(byte[] pairingSecret, byte[] cardPublicKeyBytes, byte[] responseData)
-            throws NoSuchAlgorithmException, InvalidKeyException {
+    public void createSharedSecrets(byte[] pairingSecret, byte[] cardPublicKeyBytes, byte[] responseData) {
         // convert uncompressed point returned from card into public key object
         ECPublicKey cardPublicKey = this.convertBytesToPublicKey(cardPublicKeyBytes);
         // parse returned salt and IV
@@ -99,7 +104,13 @@ public class ToolSecureChannel {
         System.arraycopy(responseData, 0, salt, 0, salt.length);
         System.arraycopy(responseData, salt.length, iv, 0, iv.length);
         // encryption and MAC keys
-        byte[] sharedSecrets = this.computeSharedSecrets(cardPublicKey, (ECPrivateKey) keyPair.getPrivate(), pairingSecret, salt);
+        byte[] sharedSecrets = null;
+        try {
+            sharedSecrets = this.computeSharedSecrets(cardPublicKey, (ECPrivateKey) keyPair.getPrivate(), pairingSecret, salt);
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            System.out.println(e);
+            return;
+        }
         aesKey.setKey(sharedSecrets, (byte) 0);
         macKey.setKey(sharedSecrets, (byte) 32);
     }
@@ -115,7 +126,7 @@ public class ToolSecureChannel {
     public CommandAPDU prepareSecureAPDU(byte CLA, byte INS, byte[] data) {
         byte[] apduBuffer;
         short filledLength = 0;
-        if (data != null) {
+        if (data != null && data.length > 0) {
             // no data part in APDU
             byte[] encryptedPayload = this.aesEncrypt(data);
             apduBuffer = new byte[5 + encryptedPayload.length + 16];
@@ -149,16 +160,11 @@ public class ToolSecureChannel {
         // verify MAC tag
         boolean verified = this.verifyResponseMAC(responseData);
         if (!verified) {
-            System.out.println("MAC not verified!");
             return null;
         }
-        
-        System.out.println("MAC verified!");
+
         // decrypt payload
         byte[] decrypted = this.aesDecrypt(responseData);
-        if (decrypted.length > 0) {
-            System.out.println("Decrypted payload!");
-        }
         // set MAC as new iv for next encryption
         this.setIV(this.iv, responseData, (short) (responseData.length - 16));
         return decrypted;

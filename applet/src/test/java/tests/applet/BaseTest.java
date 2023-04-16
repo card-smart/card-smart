@@ -1,4 +1,4 @@
-package tests;
+package tests.applet;
 
 import applet.CardSmartApplet;
 import cz.muni.fi.crocs.rcard.client.CardManager;

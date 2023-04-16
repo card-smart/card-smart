@@ -20,7 +20,7 @@ public class RunConfig {
     
     public static RunConfig getDefaultConfig() {
         RunConfig runCfg = new RunConfig();
-        runCfg.targetReaderIndex = 1;
+        runCfg.targetReaderIndex = 0;
         runCfg.testCardType = CARD_TYPE.PHYSICAL;
         runCfg.appletToSimulate = null;
         runCfg.installData = new byte[15]; // bogus install data

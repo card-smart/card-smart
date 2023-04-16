@@ -79,6 +79,18 @@ application {
     mainClass = 'tool.Main'
 }
 
+// modifies "jar" task to create self-standing runnable .jar, so-called flatJar
+jar {
+    manifest {
+        attributes "Main-Class": application.mainClass
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    exclude("META-INF/*.RSA", "META-INF/*.DSA", "META-INF/*.SF")
+    archiveName "card-smart-tool"
+}
+
 test {
     // useTestNG()
     useJUnitPlatform {

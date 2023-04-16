@@ -1,4 +1,4 @@
-package tests;
+package tests.applet;
 
 import applet.FileSystem;
 import applet.Record;

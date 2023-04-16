@@ -12,7 +12,6 @@ public class CommandParser implements CommandLineParser {
     }
 
     private void addOptions() {
-        // quit
         options.addOption(new Option("h", "help", false, "print tool usage and options"));
         options.addOption(new Option("l", "list", false, "list all names"));
         options.addOption(new Option("t", "init", false, "initialize applet"));
@@ -20,11 +19,12 @@ public class CommandParser implements CommandLineParser {
         options.addOption(buildOption("p", "pin", "pin", "use PIN"));
         options.addOption(buildOption("f", "pairing-secret-file", "path",
                 "file path to store the pairing secret for secure channel," +
-                "if file does not exist then the file and pairing secret will be created"));
+                "\n    if file does not exist then the file and pairing secret will be created"));
         options.addOption(buildOption("c", "change-pin", "pin", "change PIN"));
         options.addOption(buildOption("s", "store-secret", "name", "store secret from input file"));
         options.addOption(buildOption("i", "in-file", "file", "input file"));
         options.addOption(buildOption("d", "delete", "name", "delete secret"));
+        options.addOption(new Option("g", "debug", false, "print debug logs"));
     }
 
     private Option buildOption(String op, String long_op, String arg_name, String description) {
@@ -36,10 +36,18 @@ public class CommandParser implements CommandLineParser {
 
     public void printHelp() {
         System.out.println("Usage for card smart command line tool:");
-        System.out.println(options.toString());
+        Option[] op = options.getOptions().toArray(new Option[0]);
+
+        for (int i = 0; i < op.length; i++) {
+            System.out.print("-" + op[i].getOpt() + " --" + op[i].getLongOpt());
+            if (op[i].hasArg()) {
+                System.out.print(" [" + op[i].getArgName() + "]");
+            }
+            System.out.println("\n    " + op[i].getDescription());
+        }
     }
 
-    private boolean validateOptionArg(CommandLine cmd, String opt) throws ParseException {
+    private boolean validateOptionArg(CommandLine cmd, String opt) {
         if (cmd.hasOption(opt) &&
                 (cmd.getOptionValue(opt) == null || cmd.getOptionValues(opt).length != 1)) {
             System.out.println("Command: `--" + opt + "` needs one argument!");
@@ -48,8 +56,7 @@ public class CommandParser implements CommandLineParser {
         return true;
     }
 
-    private boolean validateCmd(CommandLine cmd) throws ParseException {
-
+    private boolean validateCmd(CommandLine cmd) {
         if ((cmd.hasOption("help") || cmd.hasOption("list"))
                 && ((cmd.getOptions().length > 1) || cmd.getArgs().length > 0)) {
             System.out.println("Command: `--" + cmd.getOptions()[0].getLongOpt()
@@ -57,7 +64,7 @@ public class CommandParser implements CommandLineParser {
             return false;
         }
 
-        if ((cmd.hasOption("v") || cmd.hasOption("c")
+        if ((cmd.hasOption("v") || cmd.hasOption("c") || cmd.hasOption("t")
                 || cmd.hasOption("s") || cmd.hasOption("d"))
                 && !cmd.hasOption("p")) {
             Option[] opt = cmd.getOptions();
@@ -76,15 +83,6 @@ public class CommandParser implements CommandLineParser {
             return false;
         }
 
-        if ((cmd.hasOption("v") && cmd.getOptionValue("v") == null)
-                || (cmd.hasOption("c") && cmd.getOptionValue("c") == null)
-                || (cmd.hasOption("s") && cmd.getOptionValue("s") == null)
-                || (cmd.hasOption("i") && cmd.getOptionValue("i") == null)
-                || (cmd.hasOption("d") && cmd.getOptionValue("d") == null)) {
-            System.out.println("Command: `--" + cmd.getOptions()[0].getLongOpt() + "` needs one argument!");
-            return false;
-        }
-
         if ((cmd.hasOption("s") && !cmd.hasOption("i"))
                 || (cmd.hasOption("i") && !cmd.hasOption("s"))) {
             System.out.println("Commands: `-s` and `-i` need to be used together");
@@ -92,15 +90,20 @@ public class CommandParser implements CommandLineParser {
         }
 
         if (cmd.hasOption("t") && !cmd.hasOption("f")) {
-            System.out.println("Command: `-t` needs to be used with `-f`");
+            System.out.println("You need to provide path to pairing secret if you" +
+                    " wish to initialize the secure channel, you can do so by using" +
+                    " option '-f' or '--pairing-secret-file'");
             return false;
         }
+
+        if (cmd.hasOption("h"))
+            printHelp();
 
         return true;
     }
 
     @Override
-    public CommandLine parse(Options options, String[] strings) throws ParseException {
+    public CommandLine parse(Options options, String[] strings) {
         try {
             CommandLine cmd = parser.parse(this.options, strings);
 
@@ -110,13 +113,13 @@ public class CommandParser implements CommandLineParser {
             }
             return cmd;
         } catch (ParseException exp) {
-            System.out.println("Unexpected exception: " + exp.getMessage());
+            System.out.println(exp.getMessage());
         }
         return null;
     }
 
     @Override
-    public CommandLine parse(Options options, String[] strings, boolean b) throws ParseException {
+    public CommandLine parse(Options options, String[] strings, boolean b) {
         return parse(options, strings);
     }
 }
