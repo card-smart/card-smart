@@ -173,9 +173,13 @@ public class Main {
         return new CommandAPDU(0xB0, ins, 0x00, 0x00, data);
     }
 
-    private static byte[] processResponse(ResponseAPDU response) throws CardWrongStateException, CardErrorException {
+    private static byte[] processResponse(ResponseAPDU response){
         if (response.getSW() != 0x9000) {
-            processSW(response.getSW());
+            try {
+                processSW(response.getSW());
+            } catch (CardWrongStateException | CardErrorException e) {
+                System.out.println(e.getMessage());
+            }
             return null;
         }
 
@@ -185,7 +189,11 @@ public class Main {
 
             if (res[len - 2] != (byte) 0x90) {
                 int sw = (res[len - 2] << 8) + res[len - 1];
-                processSW(sw);
+                try {
+                    processSW(sw);
+                } catch (CardWrongStateException | CardErrorException e) {
+                    System.out.println(e.getMessage());
+                }
                 return null;
             }
             return Arrays.copyOf(res, len - 2);
@@ -210,10 +218,9 @@ public class Main {
         return res != null && res[0] > (byte) 0x00;
     }
 
-    private static boolean cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException, CardWrongStateException, CardErrorException {
+    private static boolean cardVerifyPINOnly(CardManager cardMngr, Arguments args) throws CardException {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x22, args.PIN));
-        processResponse(response);
-        return true;
+        return processResponse(response) != null;
     }
 
     private static void cardVerifyPIN(CardManager cardMngr, Arguments args) throws Exception {
@@ -225,14 +232,15 @@ public class Main {
 
     private static void cardChangePIN(CardManager cardMngr, Arguments args) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x23, args.PIN));
-        processResponse(response);
-        System.out.println("Change PIN successful!");
+        if (processResponse(response) != null)
+            System.out.println("Change PIN successful!");
     }
 
     private static void cardGetSecret(CardManager cardMngr, Arguments args) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x24, args.secretName));
         byte[] res = processResponse(response);
-        printHexBinary(res);
+        if (res != null)
+            printHexBinary(res);
     }
 
     private static void cardStoreSecret(CardManager cardMngr, Arguments args) throws Exception {
@@ -241,24 +249,23 @@ public class Main {
         byte[] data = Arrays.copyOf(r, 44);
 
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x25, data));
-        processResponse(response);
-        System.out.println("Store secret successful!");
+        if (processResponse(response) != null)
+            System.out.println("Store secret successful!");
     }
 
     private static void cardDeleteSecret(CardManager cardMngr, Arguments args) throws Exception {
         ResponseAPDU response = cardMngr.transmit(buildAPDU( 0x26, args.secretName));
-        processResponse(response);
-        System.out.println("Delete secret successful!");
+        if (processResponse(response) != null)
+            System.out.println("Delete secret successful!");
     }
 
-    private static byte[] cardGetPublicKey(CardManager cardMngr) throws CardException, CardWrongStateException, CardErrorException {
+    private static byte[] cardGetPublicKey(CardManager cardMngr) throws CardException {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
-        processResponse(response);
-        return response.getData();
+        return processResponse(response);
     }
 
     private static void initializeApplet(CardManager cardMngr, Arguments args)
-            throws CardException, NoSuchAlgorithmException, InvalidKeyException, CardWrongStateException, CardErrorException {
+            throws CardException, NoSuchAlgorithmException, InvalidKeyException {
         byte[] cardPublicKeyBytes = cardGetPublicKey(cardMngr);
         // create payload for APDU: publicKey [65 B] | IV [16 B] | encrypted [48 B]
         byte[] payload = secure.prepareInitializationPayload(cardPublicKeyBytes, args.PIN, args.pairingSecret);
