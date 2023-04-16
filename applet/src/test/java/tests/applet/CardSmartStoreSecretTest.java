@@ -232,7 +232,8 @@ public class CardSmartStoreSecretTest extends BaseTest {
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
 
         // try store one more
-        cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData);
+        byte[] newSecretData = {4, (byte) 0x01, (byte) 0x0a, (byte) 0x0a, (byte) 0x0a, 4, 1, 2, 3, 4};
+        cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, newSecretData);
         responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
