@@ -13,8 +13,6 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Scanner;
 
-import static javax.xml.bind.DatatypeConverter.printHexBinary;
-
 public class Main {
     private static final CommandParser cmdParser = new CommandParser();
     public static boolean simulator = false;
@@ -277,7 +275,7 @@ public class Main {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x24, args.secretName));
         byte[] res = processResponse(response);
         if (res != null)
-            System.out.println(printHexBinary(res));
+            System.out.println(Util.toHex(res));
     }
 
     private static void cardStoreSecret(CardManager cardMngr, Arguments args) throws CardException {
