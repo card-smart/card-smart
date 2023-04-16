@@ -9,6 +9,9 @@ and Javacard that supports JC304 SDK and EC operations.
 This project is based on [javacard-gradle-template](https://github.com/ph4r05/javacard-gradle-template) 
 and was tested on Windows 10 and Fedora 36.
 
+Extensive documentation about applet specification, 
+functionality of the secure channel, functionality of the tool, etc. can be found in `doc/` directory.
+
 ### Card-smart applet
 The Card-smart applet can securely store 32-bit long secrets in form of name-value pairs.
 It can list all available secret names and query them individually.
@@ -52,14 +55,26 @@ Interactive mode can be started via tool execution with no argument (eg. `java -
 non-interactive mode requires arguments (eg. `java -jar card-smart-tool -c 1111 -p 0000`).
 
 ### Basic workflow
-`java -jar card-smart-tool --init -f pairing_secret -p 1111` initializes applet, 
-gets/stores pairing secret into `pairing_secret` file and sets card PIN from default `0000` to `1111`.
+Initialize applet, get/store pairing secret into `pairing_secret` file and set card PIN from default `0000` to `1111`:
+```
+java -jar card-smart-tool --init -f pairing_secret -p 1111
+```
 
-`java -jar card-smart-tool -s secret1 -i secret1.txt -f pairing_secret -p 1111`
-stores secret from `secret1.txt` as `secret1` (pairing secret file required).
+Store secret from `secret1.txt` as `secret1` (pairing secret file required):
+```
+java -jar card-smart-tool -s secret1 -i secret1.txt -f pairing_secret -p 1111
+```
 
-`java -jar card-smart-tool -v secret1 -f pairing_secret -p 1111` prints stored secret with name `secret1` in hex format.
+Print stored secret with name `secret1` in hex format:
+```
+java -jar card-smart-tool -v secret1 -f pairing_secret -p 1111
+``` 
+Changes PIN to `1234`:
+```
+java -jar card-smart-tool -c 1234 -f pairing_secret -p 1111
+```
 
-`java -jar card-smart-tool -c 1234 -f pairing_secret -p 1111` changes PIN to `1234`.
-
-`java -jar card-smart-tool -l -f pairing_secret -p 1234` lists all names of stored secrets.
+List all names of stored secrets:
+```
+java -jar card-smart-tool -l -f pairing_secret -p 1234
+```
