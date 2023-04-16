@@ -55,9 +55,11 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         String line;
         final CardManager cardMngr = getCardMngr();
+
         if (cardMngr == null)
             return;
         System.out.print("smartie$ ");
+        System.out.flush();
 
         while (!Objects.equals((line = scanner.nextLine()), "quit")) {
             String[] cmd = line.split(" ");
@@ -68,7 +70,9 @@ public class Main {
                 System.err.println("Processing card command failed");
             }
 
+
             System.out.print("smartie$ ");
+            System.out.flush();
         }
         System.out.println("Thank you for using smartie, " +
                 "your friend for smart-card interaction.");
@@ -212,7 +216,8 @@ public class Main {
         try {
             processSW(sw);
         } catch (CardWrongStateException | CardErrorException e) {
-            System.err.println("Card error: " + e.getMessage());
+            System.out.println("Card error: " + e.getMessage());
+            System.out.flush();
         }
         return null;
     }
