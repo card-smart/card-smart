@@ -62,15 +62,17 @@ public class Main {
     }
 
     private static void processCommand(String[] cmd, CardManager cardMngr) {
+        if (cardMngr == null) {
+            System.err.println("Card connection failed. Aborting program!");
+            return;
+        }
+
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
         if (cmd_parsed == null)
             return;
 
         Arguments args = new Arguments(cmd_parsed);
         if (!args.validateInput())
-            return;
-
-        if (cardMngr == null)
             return;
 
         if (checkSecureCommunication(args, cardMngr) != 0)
@@ -196,7 +198,7 @@ public class Main {
         try {
             processSW(sw);
         } catch (CardWrongStateException | CardErrorException e) {
-            System.out.println("Card error: " + e.getMessage());
+            System.err.println("Card error: " + e.getMessage());
         }
         return null;
     }
@@ -287,20 +289,20 @@ public class Main {
     private static boolean initializeApplet(CardManager cardMngr, Arguments args) {
         byte[] cardPublicKeyBytes = cardGetPublicKey(cardMngr);
         if (cardPublicKeyBytes == null) {
-            System.out.println("Failed to init applet!");
+            System.err.println("Failed to init applet!");
             return false;
         }
         // create payload for APDU: publicKey [65 B] | IV [16 B] | encrypted [48 B]
         byte[] payload = secure.prepareInitializationPayload(cardPublicKeyBytes, args.PIN, args.pairingSecret);
         if (payload == null) {
-            System.out.println("Failed to init applet!");
+            System.err.println("Failed to init applet!");
             return false;
         }
 
         // init command APDU: 0xB0 | 0x41 | 0x00 | 0x00 | 0x81 | publicKey [65 B] | IV [16 B] | encrypted [48 B]
         ResponseAPDU initResponse = cardMngr.transmit(buildAPDU(0x41, payload));
         if (initResponse.getSW() != 0x9000) {
-            System.out.println("Failed to init applet!");
+            System.err.println("Failed to init applet!");
             return false;
         }
         System.out.println("Success to init applet!");
@@ -320,7 +322,7 @@ public class Main {
         if (openSCResponse.getSW() == 0x9000)
             System.out.println("Success to open SC!");
         else {
-            System.out.println("Failed to open SC!");
+            System.err.println("Failed to open SC!");
             return false;
         }
         secure.createSharedSecrets(args.pairingSecret, cardPublicKeyBytes, openSCResponse.getData());
