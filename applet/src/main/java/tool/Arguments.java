@@ -89,7 +89,8 @@ public class Arguments {
             } catch (IOException e) {
                 return false;
             }
-            if (secretValue.length < 1) {
+            if (secretValue.length < 4 || secretValue.length > 32) {
+                System.out.println("Wrong secret length");
                 return false;
             }
         }
@@ -98,24 +99,27 @@ public class Arguments {
             return false;
 
         if (PIN != null) {
-            if (PIN.length > 10)
+            if (PIN.length < 4 || PIN.length > 10) {
+                System.out.println("Wrong PIN length");
                 return false;
+            }
             PIN = padBytes(PIN, 10);
         }
 
         if (newPIN != null) {
-            if (newPIN.length > 10)
+            if (newPIN.length < 4 || newPIN.length > 10) {
+                System.out.println("Wrong new PIN length");
                 return false;
+            }
             newPIN = padBytes(newPIN, 10);
         }
 
-        if (secretName != null && secretName.length > 10) {
+        if (secretName != null && (secretName.length < 4 || secretName.length > 10)) {
+            System.out.println("Wrong secret name length");
             return false;
         }
 
         if (secretValue != null) {
-            if (secretValue.length > 32)
-                return false;
             secretValue = padBytes(secretValue, 32);
         }
 
