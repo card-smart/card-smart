@@ -117,7 +117,6 @@ public class Main {
             return true;
 
         if (!cardGetPINTries(cardMngr)) {
-            System.out.println("You exceeded the possible tries for PIN, card is reset");
             return false;
         }
         return cardVerifyPINOnly(cardMngr, args);
