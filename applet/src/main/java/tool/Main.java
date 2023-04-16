@@ -101,7 +101,7 @@ public class Main {
             return true;
 
         if (!cardGetPINTries(cardMngr)) {
-            System.out.println("You exceeded the possible tries for PIN, card is blocked");
+            System.out.println("You exceeded the possible tries for PIN, card is reset");
             return false;
         }
         if (!cardVerifyPINOnly(cardMngr, args)) {
@@ -219,6 +219,9 @@ public class Main {
             }
             System.out.println();
             offset += length + 1;
+            if (offset >= names.length) {
+                return;
+            }
         }
     }
 
@@ -373,6 +376,8 @@ public class Main {
             case RES_ERR_NOT_LOGGED:
                 throw new CardWrongStateException("User is not authenticated via PIN.");
             case RES_ERR_RESET:
+                secure = null;
+                secureCommunication = false;
                 throw new CardWrongStateException("No remaining tries to verify PIN, card is reset.");
             case RES_ERR_PIN_POLICY:
                 throw new CardErrorException("PIN policy was not satisfied.");
