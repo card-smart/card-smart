@@ -27,7 +27,7 @@ public class Main {
     private static final String APPLET_AID = "63617264736D6172746170706C6574";
     private static final byte[] APPLET_AID_BYTE = Util.hexStringToByteArray(APPLET_AID);
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         // THIS CODE IS ONLY FOR DEMO:
         //try {
         //    secure = new ToolSecureChannel();
@@ -47,7 +47,7 @@ public class Main {
         smartie();
     }
 
-    private static void smartie() throws Exception {
+    private static void smartie() {
         Scanner scanner = new Scanner(System.in);
         System.out.print("smartie$ ");
         String line;
@@ -62,7 +62,7 @@ public class Main {
                 "your friend for smart-card interaction.");
     }
 
-    private static void processCommand(String[] cmd) throws Exception {
+    private static void processCommand(String[] cmd) {
         CommandLine cmd_parsed = cmdParser.parse(cmdParser.options, cmd);
         Arguments args = new Arguments(cmd_parsed);
         if (!args.validateInput())
@@ -106,8 +106,7 @@ public class Main {
         return true;
     }
 
-    private static int checkSecureCommunication(Arguments args, CardManager cardMngr)
-            throws CardException {
+    private static int checkSecureCommunication(Arguments args, CardManager cardMngr) {
         if (secureCommunication && args.pairingSecret != null)
             System.out.println("You do not need to provide the pairing secret" +
                     " for this session anymore");
@@ -123,15 +122,12 @@ public class Main {
             return 1;
         }
 
-        try {
-            if (args.init)
-                initializeApplet(cardMngr, args);
+        if (args.init)
+            initializeApplet(cardMngr, args);
 
-            if (!openSecureChannel(cardMngr, args))
-                return 1;
-        } catch (InvalidKeyException | NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
-            System.out.println("HW requirements were not satisfied");
-        }
+        if (!openSecureChannel(cardMngr, args))
+            return 1;
+
         secureCommunication = true;
 
         if (args.init) // we do not want to continue now, command was processed
@@ -266,8 +262,7 @@ public class Main {
         return processResponse(response);
     }
 
-    private static void initializeApplet(CardManager cardMngr, Arguments args)
-            throws NoSuchAlgorithmException, InvalidKeyException {
+    private static void initializeApplet(CardManager cardMngr, Arguments args) {
         byte[] cardPublicKeyBytes = cardGetPublicKey(cardMngr);
         // create payload for APDU: publicKey [65 B] | IV [16 B] | encrypted [48 B]
         byte[] payload = secure.prepareInitializationPayload(cardPublicKeyBytes, args.PIN, args.pairingSecret);
@@ -281,8 +276,7 @@ public class Main {
         }
     }
 
-    private static boolean openSecureChannel(CardManager cardMngr, Arguments args)
-            throws CardException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException {
+    private static boolean openSecureChannel(CardManager cardMngr, Arguments args) {
         // get public key from card
         ResponseAPDU getKeyResponse = cardMngr.transmit(buildAPDU(0x40, new byte[]{}));
         byte[] cardPublicKeyBytes = getKeyResponse.getData();

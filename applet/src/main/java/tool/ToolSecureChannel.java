@@ -47,13 +47,17 @@ public class ToolSecureChannel {
      * @param pairingSecret pairing secret to be set on card
      * @return payload
      */
-    public byte[] prepareInitializationPayload(byte[] cardPublicKeyBytes, byte[] PIN, byte[] pairingSecret)
-            throws NoSuchAlgorithmException, InvalidKeyException {
+    public byte[] prepareInitializationPayload(byte[] cardPublicKeyBytes, byte[] PIN, byte[] pairingSecret) {
         // generate IV for encryption
         this.generateIV(iv);
         // derive simple encryption key and set it as key
         ECPublicKey cardPublicKey = this.convertBytesToPublicKey(cardPublicKeyBytes);
-        byte[] simpleDerivedSecret = this.getDerivedSecret(cardPublicKey, (ECPrivateKey) keyPair.getPrivate());
+        byte[] simpleDerivedSecret = null;
+        try {
+            simpleDerivedSecret = this.getDerivedSecret(cardPublicKey, (ECPrivateKey) keyPair.getPrivate());
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            System.out.println(e);
+        }
         aesKey.setKey(simpleDerivedSecret, (short) 0);
 
         // move [PIN | pairingSecret] into buffer
@@ -81,13 +85,16 @@ public class ToolSecureChannel {
      * Generate fresh EC keypair and return its public key in uncompressed from
      * @return 0x04 | x coordinate [32 B] | y coordinate [32 B]
      */
-    public byte[] getFreshPublicKeyBytes() throws InvalidAlgorithmParameterException {
-        this.generateECKeyPair();
+    public byte[] getFreshPublicKeyBytes() {
+        try {
+            this.generateECKeyPair();
+        } catch (InvalidAlgorithmParameterException e) {
+            System.out.println(e);
+        }
         return this.getPublicKeyBytes((ECPublicKey) keyPair.getPublic());
     }
 
-    public void createSharedSecrets(byte[] pairingSecret, byte[] cardPublicKeyBytes, byte[] responseData)
-            throws NoSuchAlgorithmException, InvalidKeyException {
+    public void createSharedSecrets(byte[] pairingSecret, byte[] cardPublicKeyBytes, byte[] responseData) {
         // convert uncompressed point returned from card into public key object
         ECPublicKey cardPublicKey = this.convertBytesToPublicKey(cardPublicKeyBytes);
         // parse returned salt and IV
@@ -95,7 +102,12 @@ public class ToolSecureChannel {
         System.arraycopy(responseData, 0, salt, 0, salt.length);
         System.arraycopy(responseData, salt.length, iv, 0, iv.length);
         // encryption and MAC keys
-        byte[] sharedSecrets = this.computeSharedSecrets(cardPublicKey, (ECPrivateKey) keyPair.getPrivate(), pairingSecret, salt);
+        byte[] sharedSecrets = null;
+        try {
+            sharedSecrets = this.computeSharedSecrets(cardPublicKey, (ECPrivateKey) keyPair.getPrivate(), pairingSecret, salt);
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            System.out.println(e);
+        }
         aesKey.setKey(sharedSecrets, (byte) 0);
         macKey.setKey(sharedSecrets, (byte) 32);
     }
