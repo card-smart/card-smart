@@ -89,7 +89,7 @@ public class CardManager {
         AID appletAIDRes = simulator.installApplet(appletAID, appletClass, installData, (short) 0, (byte) installData.length);
         simulator.selectApplet(appletAID);
 
-        return new SimulatedCardChannelLocal(simulator, bDebug);
+        return new SimulatedCardChannelLocal(simulator);
     }
 
     private CardChannel connectToCardByTerminalFactory(TerminalFactory factory, int targetReaderIndex) throws CardException {
@@ -141,25 +141,20 @@ public class CardManager {
         }
     }
     
-    public ResponseAPDU transmit(CommandAPDU cmd) {
+    public ResponseAPDU transmit(CommandAPDU cmd)
+            throws CardException {
 
         lastCommand = cmd;
-        if (bDebug) {
+        if (bDebug == true) {
             log(cmd);
         }
 
         long elapsed = -System.currentTimeMillis();
-        ResponseAPDU response = null;
-
-        try {
-            response = channel.transmit(cmd);
-        } catch (CardException e) {
-            System.out.println(e);
-        }
+        ResponseAPDU response = channel.transmit(cmd);
         elapsed += System.currentTimeMillis();
         lastTransmitTime = elapsed;
 
-        if (bDebug) {
+        if (bDebug == true) {
             log(response, lastTransmitTime);
         }
 
