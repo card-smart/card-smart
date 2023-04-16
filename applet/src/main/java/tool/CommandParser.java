@@ -113,7 +113,7 @@ public class CommandParser implements CommandLineParser {
             }
             return cmd;
         } catch (ParseException exp) {
-            System.out.println("Unexpected exception: " + exp.getMessage());
+            System.out.println(exp.getMessage());
         }
         return null;
     }

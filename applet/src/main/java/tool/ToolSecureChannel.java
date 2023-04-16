@@ -160,16 +160,11 @@ public class ToolSecureChannel {
         // verify MAC tag
         boolean verified = this.verifyResponseMAC(responseData);
         if (!verified) {
-            System.out.println("MAC not verified!");
             return null;
         }
-        
-        System.out.println("MAC verified!");
+
         // decrypt payload
         byte[] decrypted = this.aesDecrypt(responseData);
-        if (decrypted.length > 0) {
-            System.out.println("Decrypted payload!");
-        }
         // set MAC as new iv for next encryption
         this.setIV(this.iv, responseData, (short) (responseData.length - 16));
         return decrypted;
