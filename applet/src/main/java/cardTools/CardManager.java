@@ -100,8 +100,8 @@ public class CardManager {
         Card card = null;
         try {
             for (CardTerminal t : factory.terminals().list()) {
-                terminals.add(t);
                 if (t.isCardPresent()) {
+                    terminals.add(t); // add only terminals with card
                     card_found = true;
                 }
             }
@@ -126,7 +126,7 @@ public class CardManager {
             System.out.println(" Done.");
 
             // Select applet 
-            System.out.println("Smartcard: Selecting applet...");
+            System.out.print("Smartcard: Selecting applet...");
 
             CommandAPDU cmd = new CommandAPDU(0x00, 0xa4, 0x04, 0x00, appletId);
             ResponseAPDU response = transmit(cmd);
