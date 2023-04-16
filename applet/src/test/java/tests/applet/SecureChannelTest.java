@@ -1,14 +1,12 @@
-package tests;
+package tests.applet;
 
 import cz.muni.fi.crocs.rcard.client.CardManager;
 import cz.muni.fi.crocs.rcard.client.CardType;
-import org.junit.Assert;
 import org.junit.jupiter.api.*;
 import tool.ToolSecureChannel;
 
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import java.util.Arrays;
 
 public class SecureChannelTest extends BaseTest {
 

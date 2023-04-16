@@ -33,9 +33,9 @@ public class SimulatedCardChannelLocal extends CardChannel {
         ResponseAPDU responseAPDU = null;
 
         try {
-            log(apdu);
+            //log(apdu);
             responseAPDU = this.m_simulator.transmitCommand(apdu);
-            log(responseAPDU);
+            //log(responseAPDU);
             // TODO: Add delay corresponding to real cards
             //int delay = OperationTimes.getCardOperationDelay(apdu);
             //Thread.sleep(delay);

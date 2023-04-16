@@ -1,4 +1,4 @@
-package tests;
+package tests.applet;
 
 import cz.muni.fi.crocs.rcard.client.CardType;
 import org.junit.Assert;

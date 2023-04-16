@@ -1,8 +1,7 @@
-package tests;
+package tests.applet;
 
 import cz.muni.fi.crocs.rcard.client.CardManager;
 import cz.muni.fi.crocs.rcard.client.CardType;
-import org.junit.Assert;
 import org.junit.jupiter.api.*;
 
 import javax.smartcardio.CommandAPDU;

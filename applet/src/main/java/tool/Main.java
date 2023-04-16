@@ -122,10 +122,7 @@ public class Main {
             System.out.println("You exceeded the possible tries for PIN, card is reset");
             return false;
         }
-        if (!cardVerifyPINOnly(cardMngr, args)) {
-            return false;
-        }
-        return true;
+        return cardVerifyPINOnly(cardMngr, args);
     }
 
     private static int checkSecureCommunication(Arguments args, CardManager cardMngr) throws CardException {
@@ -182,7 +179,7 @@ public class Main {
                 return null;
             }
         } catch (Exception e) {
-            System.out.println(e);
+            System.out.println(e.getMessage());
         }
         System.out.println(" Done.");
         return cardMngr;
@@ -273,7 +270,7 @@ public class Main {
     private static void cardChangePIN(CardManager cardMngr, Arguments args) throws CardException {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x23, args.newPIN));
         if (processResponse(response) != null)
-            System.out.println("PIN changes");
+            System.out.println("PIN changed");
     }
 
     private static void cardGetSecret(CardManager cardMngr, Arguments args) throws CardException {
