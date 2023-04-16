@@ -6,12 +6,8 @@ import cardTools.RunConfig;
 import cardTools.Util;
 import org.apache.commons.cli.CommandLine;
 
-import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Scanner;
@@ -50,16 +46,16 @@ public class Main {
 
     private static void smartie() {
         Scanner scanner = new Scanner(System.in);
-        System.out.print("smartie$ ");
         String line;
         final CardManager cardMngr = getCardMngr();
+        System.out.print("\u001B[35m" + "smartie$ " + "\u001B[0m");
 
         while (!Objects.equals((line = scanner.nextLine()), "quit")) {
             String[] cmd = line.split(" ");
 
             processCommand(cmd, cardMngr);
 
-            System.out.print("smartie$ ");
+            System.out.print("\u001B[35m" + "smartie$ " + "\u001B[0m");
         }
         System.out.println("Thank you for using smartie, " +
                 "your friend for smart-card interaction.");
