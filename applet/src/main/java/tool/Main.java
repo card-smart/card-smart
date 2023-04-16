@@ -20,7 +20,7 @@ import static javax.xml.bind.DatatypeConverter.printHexBinary;
 
 public class Main {
     private static final CommandParser cmdParser = new CommandParser();
-    private static final boolean simulator = true;
+    private static final boolean simulator = false;
     private static boolean secureCommunication = false;
     private static ToolSecureChannel secure = null; // secure object implementing all SC functions,
                                                     // all sensitive data (keys, iv) are stored inside

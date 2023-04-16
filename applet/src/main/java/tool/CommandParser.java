@@ -19,7 +19,7 @@ public class CommandParser implements CommandLineParser {
         options.addOption(buildOption("p", "pin", "pin", "use PIN"));
         options.addOption(buildOption("f", "pairing-secret-file", "path",
                 "file path to store the pairing secret for secure channel," +
-                " if file does not exist then the file and pairing secret will be created"));
+                "\n    if file does not exist then the file and pairing secret will be created"));
         options.addOption(buildOption("c", "change-pin", "pin", "change PIN"));
         options.addOption(buildOption("s", "store-secret", "name", "store secret from input file"));
         options.addOption(buildOption("i", "in-file", "file", "input file"));
@@ -35,7 +35,15 @@ public class CommandParser implements CommandLineParser {
 
     public void printHelp() {
         System.out.println("Usage for card smart command line tool:");
-        System.out.println(options.toString());
+        Option[] op = options.getOptions().toArray(new Option[0]);
+
+        for (int i = 0; i < op.length; i++) {
+            System.out.print("-" + op[i].getOpt() + " --" + op[i].getLongOpt());
+            if (op[i].hasArg()) {
+                System.out.print(" [" + op[i].getArgName() + "]");
+            }
+            System.out.println("\n    " + op[i].getDescription());
+        }
     }
 
     private boolean validateOptionArg(CommandLine cmd, String opt) {
