@@ -38,6 +38,8 @@ public class Main {
         // RELEASE
         if (args.length > 0) {
             final CardManager cardMngr = getCardMngr();
+            if (cardMngr == null)
+                return;
             try {
                 processCommand(args, cardMngr);
             } catch (Exception e) {
@@ -53,7 +55,9 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         String line;
         final CardManager cardMngr = getCardMngr();
-        System.out.print("\u001B[35m" + "smartie$ " + "\u001B[0m");
+        if (cardMngr == null)
+            return;
+        System.out.print("smartie$ ");
 
         while (!Objects.equals((line = scanner.nextLine()), "quit")) {
             String[] cmd = line.split(" ");
@@ -64,7 +68,7 @@ public class Main {
                 System.err.println("Processing card command failed");
             }
 
-            System.out.print("\u001B[35m" + "smartie$ " + "\u001B[0m");
+            System.out.print("smartie$ ");
         }
         System.out.println("Thank you for using smartie, " +
                 "your friend for smart-card interaction.");
