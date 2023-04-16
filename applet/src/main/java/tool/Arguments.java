@@ -124,10 +124,6 @@ public class Arguments {
             return false;
         }
 
-        if (secretValue != null) {
-            secretValue = padBytes(secretValue, 32);
-        }
-
         return true;
     }
 
