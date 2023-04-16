@@ -54,6 +54,7 @@ public class Main {
 
         while (!Objects.equals((line = scanner.nextLine()), "quit")) {
             String[] cmd = line.split(" ");
+
             processCommand(cmd);
 
             System.out.print("smartie$ ");
@@ -203,12 +204,30 @@ public class Main {
         return null;
     }
 
+    private static void printNames(byte[] names) {
+        if (names == null || names.length == 0) {
+            return;
+        }
+        byte offset = 0;
+        while (true) {
+            byte length = names[offset];
+            if (length == 0 || names.length - (offset + 1) < length) {
+                return;
+            }
+            for (int i = offset + 1; i < offset + 1 + length; i++) {
+                System.out.printf("%02X", names[i]);
+            }
+            System.out.println();
+            offset += length + 1;
+        }
+    }
+
     private static void cardGetNames(CardManager cardMngr) {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x20, new byte[]{}));
         byte[] res = processResponse(response);
 
         if (res != null) {
-            printHexBinary(res);
+            printNames(res);
         }
     }
 
@@ -232,7 +251,7 @@ public class Main {
     }
 
     private static void cardChangePIN(CardManager cardMngr, Arguments args) {
-        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x23, args.PIN));
+        ResponseAPDU response = cardMngr.transmit(buildAPDU(0x23, args.newPIN));
         if (processResponse(response) != null)
             System.out.println("Change PIN successful!");
     }
