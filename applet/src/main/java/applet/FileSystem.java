@@ -103,6 +103,11 @@ public class FileSystem {
             throw new InvalidArgumentException();
         }
 
+        if (getIndexByName(buffer, nameLength, nameOffset) != -1) {
+            // name already exists in filesystem
+            throw new StorageException();
+        }
+
         byte index = getIndexOfFirstEmptyRecord();
         if (index < 0) {
             throw new StorageException();
