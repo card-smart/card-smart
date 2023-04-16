@@ -83,7 +83,11 @@ public class CardSmartStoreSecretTest extends BaseTest {
         Assertions.assertEquals(0x9000, responseAPDU.getSW());
 
         /* Store secret on card */
-        byte[] secretData = {0x04, 0x20, 0x21, 0x23, 0x24, 0x05, 0x20, 0x21, 0x23, 0x24, 0x25};
+        byte[] secretData = {0x0A, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29,
+                             0x20, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29,
+                                   0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29,
+                                   0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29,
+                                   0x20, 0x21};
         cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData);
         responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
@@ -165,5 +169,73 @@ public class CardSmartStoreSecretTest extends BaseTest {
         responseAPDU = card.transmit(cmd);
         Assertions.assertNotNull(responseAPDU);
         Assertions.assertEquals(0x6B06, responseAPDU.getSW());
+    }
+
+    @Test
+    public void fullStorage() throws Exception {
+        CardManager card = connect();
+        /* Verify on default PIN */
+        byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
+        CommandAPDU cmd = new CommandAPDU(0xB0, 0x22, 0x00, 0x00, data);
+        ResponseAPDU responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+
+        /* Store secret on card */
+        for (int i = 0; i < 16; i++) {
+            byte[] secretData = {4, (byte) i, (byte) i, (byte) i, (byte) i, 4, 1, 2, 3, 4};
+            cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData);
+            responseAPDU = card.transmit(cmd);
+            Assertions.assertNotNull(responseAPDU);
+            Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        }
+
+        // another one should fail
+        byte[] secretData = {4, (byte) 0x0a, (byte) 0x0a, (byte) 0x0a, (byte) 0x0a, 4, 1, 2, 3, 4};
+        cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x6B04, responseAPDU.getSW());
+    }
+
+    @Test
+    public void fullStorage_removeAndAdd() throws Exception {
+        CardManager card = connect();
+        /* Verify on default PIN */
+        byte[] data = {0x30, 0x30, 0x30, 0x30, 0, 0, 0, 0, 0, 0};
+        CommandAPDU cmd = new CommandAPDU(0xB0, 0x22, 0x00, 0x00, data);
+        ResponseAPDU responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+
+        /* Store secret on card */
+        for (int i = 0; i < 16; i++) {
+            byte[] secretData = {4, (byte) i, (byte) i, (byte) i, (byte) i, 4, 1, 2, 3, 4};
+            cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData);
+            responseAPDU = card.transmit(cmd);
+            Assertions.assertNotNull(responseAPDU);
+            Assertions.assertEquals(0x9000, responseAPDU.getSW());
+        }
+
+        // another one should fail
+        byte[] secretData = {4, (byte) 0x0a, (byte) 0x0a, (byte) 0x0a, (byte) 0x0a, 4, 1, 2, 3, 4};
+        cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, secretData);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x6B04, responseAPDU.getSW());
+
+        // delete one secret
+        byte[] name = {0x03, 0x03, 0x03, 0x03};
+        cmd = new CommandAPDU(0xB0, 0x26, 0x00, 0x00, name);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
+
+        // try store one more
+        byte[] newSecretData = {4, (byte) 0x01, (byte) 0x0a, (byte) 0x0a, (byte) 0x0a, 4, 1, 2, 3, 4};
+        cmd = new CommandAPDU(0xB0, 0x25, 0x00, 0x00, newSecretData);
+        responseAPDU = card.transmit(cmd);
+        Assertions.assertNotNull(responseAPDU);
+        Assertions.assertEquals(0x9000, responseAPDU.getSW());
     }
 }

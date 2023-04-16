@@ -5,7 +5,7 @@ import javacard.security.KeyPair;
 
 /**
  * Custom parameters for SECP256r1 curve
- * @apiNote parameters taken from Keycard project
+ * @apiNote parameters taken from https://neuromancer.sk/std/secg/secp256r1
  */
 public class SECP256r1 {
     static final byte[] SECP256r1_FP = {

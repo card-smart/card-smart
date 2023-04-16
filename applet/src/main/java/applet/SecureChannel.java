@@ -82,7 +82,7 @@ public class SecureChannel {
      *
      * @param newPairingSecret the pairing secret
      * @param offset start of the pairing secret in the newPairingSecret buffer
-     * @apiNote reimplemented from status-keycard/SecureChannel.java
+     * @apiNote inspired & reimplemented from status-keycard/SecureChannel.java
      */
     public void initSecureChannel(byte[] newPairingSecret, short offset) {
         // set new pairing secret after init command in the applet
@@ -94,7 +94,7 @@ public class SecureChannel {
     /**
      * Decrypts the content of the APDU by symmetric key
      * @param apduBuffer the APDU buffer [123 B] = key length [1 B] | EC public key [65 B] | IV [16 B] | encrypted(PIN | pairingSecret) [42 B]
-     * @apiNote reimplemented from status-keycard/SecureChannel.java
+     * @apiNote inspired & reimplemented from status-keycard/SecureChannel.java
      */
     public void initDecrypt(byte[] apduBuffer) {
         try {
@@ -126,7 +126,7 @@ public class SecureChannel {
     /**
      * Open secure channel and generate AES keys for encryption and MAC
      * @param apdu CLA | INS | P1 | P2 | Lc | public key
-     * @apiNote reimplemented from status-keycard/SecureChannel.java
+     * @apiNote inspired & reimplemented from status-keycard/SecureChannel.java
      */
     public void openSecureChannel(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
@@ -182,7 +182,7 @@ public class SecureChannel {
         try {
             // 1. initialize MAC algorithm with AES MAC secret key
             mac.init(macKey, Signature.MODE_VERIFY);
-            // 2. load data (including instruction bytes) and verify the tag
+            // 2. load data (including instruction bytes padded with IV) and verify the tag
             mac.update(apduBuffer, (short) 0, ISO7816.OFFSET_CDATA);
             mac.update(iv, (short) 0, (short) (AES_BLOCK_SIZE - ISO7816.OFFSET_CDATA));
             return mac.verify(apduBuffer, ISO7816.OFFSET_CDATA, dataLength, apduBuffer, macOffset, MAC_SIZE);
@@ -195,7 +195,7 @@ public class SecureChannel {
     /**
      * Decrypt APDU data buffer in place
      * @param apduBuffer CLA | INS | P1 | P2 | Lc | encrypted payload [max 240 B] | MAC tag [16 B]
-     * @apiNote taken from status-keycard/SecureChannel.java
+     * @apiNote inspired & reimplemented from status-keycard/SecureChannel.java
      */
     public void decryptAPDU(byte[] apduBuffer) {
         // 1. get length (Lc) of the APDU (it should be divisible by AES_BLOCK_SIZE)
@@ -259,7 +259,7 @@ public class SecureChannel {
      * @param responseOffset where the data starts withing responseBuffer
      * @return length of payload (encrypted data + MAC)
      * @apiNote result: ... | encrypted(data | SW1 | SW2) | MAC tag
-     * @apiNote taken from status-keycard/SecureChannel.java
+     * @apiNote inspired & reimplemented from status-keycard/SecureChannel.java
      */
     public short encryptResponse(byte[] responseBuffer, short responseLength, short responseOffset, short SW) {
         // 1. Add SW after response into the buffer
