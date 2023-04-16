@@ -260,7 +260,7 @@ public class Main {
         ResponseAPDU response = cardMngr.transmit(buildAPDU(0x24, args.secretName));
         byte[] res = processResponse(response);
         if (res != null)
-            printHexBinary(res);
+            System.out.println(printHexBinary(res));
     }
 
     private static void cardStoreSecret(CardManager cardMngr, Arguments args) {
