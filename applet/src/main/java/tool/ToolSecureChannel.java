@@ -126,7 +126,7 @@ public class ToolSecureChannel {
     public CommandAPDU prepareSecureAPDU(byte CLA, byte INS, byte[] data) {
         byte[] apduBuffer;
         short filledLength = 0;
-        if (data != null) {
+        if (data != null && data.length > 0) {
             // no data part in APDU
             byte[] encryptedPayload = this.aesEncrypt(data);
             apduBuffer = new byte[5 + encryptedPayload.length + 16];
