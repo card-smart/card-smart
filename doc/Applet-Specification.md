@@ -168,14 +168,15 @@
 
 #### Open Secure Channel
 * works only in initialized mode
-| APDU | Values                             |
-| ---- | ---------------------------------- |
-| CLA  | `0xB0`                             |
-| INS  | `0x42`                             |
-| P0   | `0x00`                             |
-| P1   | `0x00`                             |
-| lc   | `0x41`                             |
-| DATA | public key in uncompressed form    |
+
+| APDU | Values                          |
+|------|---------------------------------|
+| CLA  | `0xB0`                          |
+| INS  | `0x42`                          |
+| P0   | `0x00`                          |
+| P1   | `0x00`                          |
+| lc   | `0x41`                          |
+| DATA | public key in uncompressed form |
 
 | RES      | Data field  | Info                        |
 |----------|-------------|-----------------------------|
