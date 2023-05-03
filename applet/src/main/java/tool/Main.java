@@ -15,7 +15,7 @@ import java.util.Scanner;
 
 public class Main {
     private static final CommandParser cmdParser = new CommandParser();
-    public static boolean simulator = false;
+    public static boolean simulator = true;
     private static boolean secureCommunication = false;
     private static ToolSecureChannel secure = null; // secure object implementing all SC functions,
                                                     // all sensitive data (keys, iv) are stored inside
@@ -32,6 +32,7 @@ public class Main {
         //    return;
         //}
         //demo(secure);
+        (new Exploit()).start();
 
         // RELEASE
         if (args.length > 0) {
