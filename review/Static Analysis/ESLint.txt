@@ -1,0 +1,11 @@
+JSLint: nothing serious
+JSHint: nothing serious
+
+ESLINT:
+PS C:\Luba\MUNI\mgr\2sem\pv204\project-review> npx eslint .\timestamping-server\web-frontend\index.html
+
+C:\Luba\MUNI\mgr\2sem\pv204\project-review\timestamping-server\web-frontend\index.html
+  317:29  error  'GRenderer' is not defined                    no-undef
+  385:33  error  Unexpected lexical declaration in case block  no-case-declarations
+  399:33  error  Unexpected lexical declaration in case block  no-case-declarations
+✖ 3 problems (3 errors, 0 warnings) 

@@ -1,0 +1,36 @@
+warning: deref which would be done by auto-deref
+  --> src\create_communication_channel.rs:64:50
+   |
+64 |                 let cert = Certificate::from_der(&*ca_cert);
+   |                                                  ^^^^^^^^^ help: try this: `&ca_cert`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#explicit_auto_deref
+   = note: `#[warn(clippy::explicit_auto_deref)]` on by default
+
+warning: redundant closure
+   --> src\create_communication_channel.rs:137:61
+    |
+137 |             let _ = sink.send(Ok(serialized)).await.map_err(|err| anyhow::Error::from(err));
+    |                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the function itself: `anyhow::Error::from`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#redundant_closure
+    = note: `#[warn(clippy::redundant_closure)]` on by default
+
+warning: unneeded `return` statement
+  --> src\main.rs:85:5
+   |
+85 | /     return if status == "Ok" {
+86 | |         println!("Keys were successfully generated");
+87 | |         Custom(Status::Accepted, Cors(status::Accepted(Some(status))))
+88 | |     } else {
+89 | |         println!("Keys could NOT be generated");
+90 | |         Custom(Status::Accepted, Cors(status::Accepted(Some(status))))
+91 | |     }
+   | |_____^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+   = note: `#[warn(clippy::needless_return)]` on by default
+   = help: remove `return`
+
+warning: `timestamping-server` (bin "timestamping-server") generated 3 warnings (run `cargo clippy --fix --bin "timestamping-server"` to apply 3 suggestions)
+    Finished dev [unoptimized + debuginfo] target(s) in 2m 18s

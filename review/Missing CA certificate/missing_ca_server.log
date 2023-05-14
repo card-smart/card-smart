@@ -1,0 +1,165 @@
+[veronika@fedora timestamping-server]$ ./start-stop.sh start all
+Building...
+Building...
+Starting server with index 1 on http://localhost:8000
+Building...
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+Starting server with index 2 on http://localhost:8001
+Building...
+    Finished dev [unoptimized + debuginfo] target(s) in 0.64s
+     Running `target/debug/timestamping-server 1 8000 3000`
+🔧 Configured for debug.
+   >> address: 127.0.0.1
+   >> port: 3000
+   >> workers: 4
+   >> max blocking threads: 512
+   >> ident: Rocket
+   >> IP header: X-Real-IP
+   >> limits: bytes = 8KiB, data-form = 2MiB, file = 1MiB, form = 32KiB, json = 1GiB, msgpack = 1MiB, string = 8KiB
+   >> temp dir: /tmp
+   >> http/2: true
+   >> keep-alive: 5s
+   >> tls: enabled w/mtls
+   >> shutdown: ctrlc = true, force = true, signals = [SIGTERM], grace = 2s, mercy = 3s
+   >> log level: normal
+   >> cli colors: true
+📬 Routes:
+   >> (receive_broadcast) POST /receive_broadcast/<room_id>
+📡 Fairings:
+   >> Shield (liftoff, response, singleton)
+🔧 Configured for debug.
+   >> address: 127.0.0.1
+   >> port: 8000
+   >> workers: 4
+   >> max blocking threads: 512
+   >> ident: Rocket
+   >> IP header: X-Real-IP
+   >> limits: bytes = 8KiB, data-form = 2MiB, file = 1MiB, form = 32KiB, json = 1GiB, msgpack = 1MiB, string = 8KiB
+   >> temp dir: /tmp
+   >> http/2: true
+   >> keep-alive: 5s
+   >> tls: disabled
+   >> shutdown: ctrlc = true, force = true, signals = [SIGTERM], grace = 2s, mercy = 3s
+   >> log level: normal
+   >> cli colors: true
+📬 Routes:
+   >> (verify) POST /verify
+   >> (sign) POST /sign/<room_id>
+   >> (key_gen) POST /key_gen/<room_id>
+📡 Fairings:
+   >> Shield (liftoff, response, singleton)
+🛡️ Shield:
+   >> Permissions-Policy: interest-cohort=()
+   >> X-Content-Type-Options: nosniff
+   >> X-Frame-Options: SAMEORIGIN
+🚀 Rocket has launched from http://127.0.0.1:8000
+    Blocking waiting for file lock on package cache
+Warning: Rocket is executing inside of a custom runtime.
+   >> Rocket's runtime is enabled via `#[rocket::main]` or `#[launch]`.
+   >> Forced shutdown is disabled. Runtime settings may be suboptimal.
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Finished dev [unoptimized + debuginfo] target(s) in 0.82s
+Starting server with index 3 on http://localhost:8002
+     Running `target/debug/timestamping-server 2 8001 3001`
+🔧 Configured for debug.
+   >> address: 127.0.0.1
+   >> port: 3001
+   >> workers: 4
+   >> max blocking threads: 512
+   >> ident: Rocket
+   >> IP header: X-Real-IP
+   >> limits: bytes = 8KiB, data-form = 2MiB, file = 1MiB, form = 32KiB, json = 1GiB, msgpack = 1MiB, string = 8KiB
+   >> temp dir: /tmp
+   >> http/2: true
+   >> keep-alive: 5s
+   >> tls: enabled w/mtls
+   >> shutdown: ctrlc = true, force = true, signals = [SIGTERM], grace = 2s, mercy = 3s
+   >> log level: normal
+   >> cli colors: true
+🔧 Configured for debug.
+   >> address: 127.0.0.1
+   >> port: 8001
+   >> workers: 4
+   >> max blocking threads: 512
+   >> ident: Rocket
+   >> IP header: X-Real-IP
+   >> limits: bytes = 8KiB, data-form = 2MiB, file = 1MiB, form = 32KiB, json = 1GiB, msgpack = 1MiB, string = 8KiB
+   >> temp dir: /tmp
+   >> http/2: true
+   >> keep-alive: 5s
+   >> tls: disabled
+   >> shutdown: ctrlc = true, force = true, signals = [SIGTERM], grace = 2s, mercy = 3s
+   >> log level: normal
+   >> cli colors: true
+📬 Routes:
+   >> (verify) POST /verify
+   >> (sign) POST /sign/<room_id>
+   >> (key_gen) POST /key_gen/<room_id>
+📡 Fairings:
+   >> Shield (liftoff, response, singleton)
+🛡️ Shield:
+   >> Permissions-Policy: interest-cohort=()
+   >> X-Content-Type-Options: nosniff
+   >> X-Frame-Options: SAMEORIGIN
+🚀 Rocket has launched from http://127.0.0.1:8001
+📬 Routes:
+   >> (receive_broadcast) POST /receive_broadcast/<room_id>
+📡 Fairings:
+   >> Shield (liftoff, response, singleton)
+Warning: Rocket is executing inside of a custom runtime.
+   >> Rocket's runtime is enabled via `#[rocket::main]` or `#[launch]`.
+   >> Forced shutdown is disabled. Runtime settings may be suboptimal.
+[veronika@fedora timestamping-server]$     Finished dev [unoptimized + debuginfo] target(s) in 0.26s
+     Running `target/debug/timestamping-server 3 8002 3002`
+🔧 Configured for debug.
+   >> address: 127.0.0.1
+   >> port: 3002
+   >> workers: 4
+   >> max blocking threads: 512
+   >> ident: Rocket
+   >> IP header: X-Real-IP
+   >> limits: bytes = 8KiB, data-form = 2MiB, file = 1MiB, form = 32KiB, json = 1GiB, msgpack = 1MiB, string = 8KiB
+   >> temp dir: /tmp
+   >> http/2: true
+   >> keep-alive: 5s
+   >> tls: enabled w/mtls
+   >> shutdown: ctrlc = true, force = true, signals = [SIGTERM], grace = 2s, mercy = 3s
+   >> log level: normal
+   >> cli colors: true
+📬 Routes:
+   >> (receive_broadcast) POST /receive_broadcast/<room_id>
+📡 Fairings:
+   >> Shield (liftoff, response, singleton)
+🔧 Configured for debug.
+   >> address: 127.0.0.1
+   >> port: 8002
+   >> workers: 4
+   >> max blocking threads: 512
+   >> ident: Rocket
+   >> IP header: X-Real-IP
+   >> limits: bytes = 8KiB, data-form = 2MiB, file = 1MiB, form = 32KiB, json = 1GiB, msgpack = 1MiB, string = 8KiB
+   >> temp dir: /tmp
+   >> http/2: true
+   >> keep-alive: 5s
+   >> tls: disabled
+   >> shutdown: ctrlc = true, force = true, signals = [SIGTERM], grace = 2s, mercy = 3s
+   >> log level: normal
+   >> cli colors: true
+📬 Routes:
+   >> (verify) POST /verify
+   >> (sign) POST /sign/<room_id>
+   >> (key_gen) POST /key_gen/<room_id>
+📡 Fairings:
+   >> Shield (liftoff, response, singleton)
+🛡️ Shield:
+   >> X-Content-Type-Options: nosniff
+   >> X-Frame-Options: SAMEORIGIN
+   >> Permissions-Policy: interest-cohort=()
+🚀 Rocket has launched from http://127.0.0.1:8002
+Warning: Rocket is executing inside of a custom runtime.
+   >> Rocket's runtime is enabled via `#[rocket::main]` or `#[launch]`.
+   >> Forced shutdown is disabled. Runtime settings may be suboptimal.
